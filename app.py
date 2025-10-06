@@ -2,12 +2,27 @@ import streamlit as st
 import json
 import pandas as pd
 import io
+# 🔑 REMOVA O PREFIXO: use imports diretos
 from session_state import init_session_state
 from models import Turma, Professor, Disciplina, Sala
 from scheduler_ortools import GradeHorariaORTools
 from export import exportar_para_excel, exportar_para_pdf
 import database
-from simple_scheduler import SimpleGradeHoraria  # ← NOVO IMPORT
+from simple_scheduler import SimpleGradeHoraria
+# 🔑 REMOVA O PREFIXO no auth também
+from auth import login, handle_redirect
+
+# Verificar login
+if "user" not in st.session_state:
+    st.set_page_config(page_title="Login - Escola Timetable")
+    st.title("🔐 Acesso ao Sistema de Grade Horária")
+    st.write("Por favor, faça login com sua conta Google para continuar.")
+    login()
+    handle_redirect()
+    st.stop()
+
+# Resto do código igual...
+# [MANTENHA TODO O RESTANTE DO CÓDIGO DO APP.PY AQUI]
 
 # Inicializar estado da sessão
 init_session_state()
