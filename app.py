@@ -8,12 +8,27 @@ from scheduler_ortools import GradeHorariaORTools
 from export import exportar_para_excel, exportar_para_pdf
 import database
 from simple_scheduler import SimpleGradeHoraria
-from auth import login, handle_redirect
 
+# Remover verificação de login
+# init_session_state()
+
+# Função para cores
+def color_disciplina(val):
+    if val:
+        for d in st.session_state.disciplinas:
+            if d.nome == val:
+                return f'background-color: {d.cor}; color: white; font-weight: bold'
+    return ''
+
+st.set_page_config(page_title="Escola Timetable", layout="wide")
+st.title("🕒 Gerador Inteligente de Grade Horária")
+
+# [RESTANTE DO CÓDIGO IGUAL AO ANTERIOR...]
+# (Copie todo o conteúdo do app.py anterior, removendo apenas a parte de login)
 # Verificar login
 if "user" not in st.session_state:
     st.set_page_config(page_title="Login - Escola Timetable")
-    st.title("🔐 Acesso ao Sistema de Grade Horária")
+    st.title("🔐 Acesso ao Sistema de Grade Horária")#
     st.write("Por favor, faça login com sua conta Google para continuar.")
     login()
     handle_redirect()
