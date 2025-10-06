@@ -2,11 +2,11 @@ import streamlit as st
 import json
 import pandas as pd
 import io
-from session_state import init_session_state  # ← SEM PREFIXO
+from session_state import init_session_state
 from models import Turma, Professor, Disciplina, Sala
 from scheduler_ortools import GradeHorariaORTools
 from export import exportar_para_excel, exportar_para_pdf
-import database  # ← IMPORT DIRETO
+import database
 
 # Inicializar estado da sessão
 init_session_state()
@@ -15,8 +15,54 @@ st.set_page_config(page_title="Escola Timetable", layout="wide")
 st.title("🕒 Gerador Inteligente de Grade Horária")
 
 # Abas
-abas = st.tabs(["🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas", "🏫 Salas", "📅 Calendário"])
-aba1, aba2, aba3, aba4, aba5, aba6 = abas
+abas = st.tabs(["🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas", "🏫 Salas", "📅 Calendário", "⚙️ Configurações"])
+aba1, aba2, aba3, aba4, aba5, aba6, aba7 = abas
+
+# =================== ABA 7: CONFIGURAÇÕES ===================
+with aba7:
+    st.header("Configurações Avançadas")
+    st.write("Ajuste as regras para gerar a grade horária.")
+    
+    # Opções de relaxamento
+    st.session_state.relaxar_horario_ideal = st.checkbox(
+        "✅ Relaxar horário ideal (disciplinas pesadas podem ser à tarde)",
+        value=st.session_state.get("relaxar_horario_ideal", False)
+    )
+    
+    st.session_state.max_aulas_professor_dia = st.slider(
+        "Máximo de aulas por professor por dia",
+        min_value=4,
+        max_value=6,
+        value=st.session_state.get("max_aulas_professor_dia", 6)
+    )
+    
+    st.session_state.permitir_janelas = st.checkbox(
+        "Permitir janelas para professores (aulas não consecutivas)",
+        value=st.session_state.get("permitir_janelas", True)
+    )
+    
+    st.divider()
+    st.subheader("Diagnóstico de Viabilidade")
+    if st.button("🔍 Analisar Viabilidade"):
+        # Análise simples
+        total_aulas = 0
+        for turma in st.session_state.turmas:
+            for disc in st.session_state.disciplinas:
+                if turma.serie in disc.series:
+                    total_aulas += disc.carga_semanal
+        
+        capacidade_total = 0
+        for prof in st.session_state.professores:
+            dias = len(prof.disponibilidade)
+            capacidade_total += dias * st.session_state.max_aulas_professor_dia
+        
+        st.metric("Total de aulas necessárias", total_aulas)
+        st.metric("Capacidade total de professores", capacidade_total)
+        
+        if capacidade_total >= total_aulas:
+            st.success("✅ Capacidade suficiente para gerar grade")
+        else:
+            st.error("⚠️ Capacidade insuficiente! Adicione mais professores ou reduza carga horária.")
 
 # =================== ABA 1: INÍCIO ===================
 with aba1:
@@ -68,7 +114,8 @@ with aba1:
                 grade = GradeHorariaORTools(
                     st.session_state.turmas,
                     st.session_state.professores,
-                    st.session_state.disciplinas
+                    st.session_state.disciplinas,
+                    relaxar_horario_ideal=st.session_state.relaxar_horario_ideal
                 )
                 aulas = grade.resolver()
                 
@@ -91,7 +138,11 @@ with aba1:
                     fill_value=""
                 ).reindex(columns=["seg", "ter", "qua", "qui", "sex"], fill_value="")
                 
-                st.success("✅ Grade gerada com sucesso!")
+                if st.session_state.relaxar_horario_ideal:
+                    st.warning("⚠️ Grade gerada com restrições relaxadas (horários ideais ignorados).")
+                else:
+                    st.success("✅ Grade gerada com todas as restrições respeitadas!")
+                
                 st.dataframe(tabela, use_container_width=True)
                 
                 output = io.BytesIO()
@@ -137,6 +188,7 @@ with aba1:
                 
             except Exception as e:
                 st.error(f"❌ Erro ao gerar grade: {str(e)}")
+                st.info("💡 Dica: Vá para a aba '⚙️ Configurações' e marque 'Relaxar horário ideal' para aumentar as chances de sucesso.")
 
 # =================== ABA 2: DISCIPLINAS ===================
 with aba2:
