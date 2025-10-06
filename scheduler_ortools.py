@@ -1,11 +1,10 @@
-# scheduler_ortools.py
 from ortools.sat.python import cp_model
 from neuro_rules import eh_horario_ideal
 from collections import defaultdict
 from models import Aula
 
 class GradeHorariaORTools:
-    def __init__(self, turmas, professores, disciplinas):
+    def __init__(self, turmas, professores, disciplinas, relaxar_horario_ideal=False):
         self.turmas = turmas
         self.professores = professores
         self.disciplinas = {d.nome: d for d in disciplinas}
@@ -14,6 +13,7 @@ class GradeHorariaORTools:
         self.model = cp_model.CpModel()
         self.solver = cp_model.CpSolver()
         self.solver.parameters.max_time_in_seconds = 10.0
+        self.relaxar_horario_ideal = relaxar_horario_ideal
 
         self.turma_idx = {t.nome: i for i, t in enumerate(turmas)}
         self.disciplinas_por_turma = self._disciplinas_por_turma()
@@ -24,7 +24,6 @@ class GradeHorariaORTools:
         self._preparar_dados()
         self._criar_variaveis()
         self._adicionar_restricoes()
-        self._definir_objetivo()
 
     def _disciplinas_por_turma(self):
         dp = defaultdict(list)
@@ -92,16 +91,15 @@ class GradeHorariaORTools:
                     if vars_prof:
                         self.model.Add(sum(vars_prof) <= 1)
 
-    def _definir_objetivo(self):
-        # Priorizar horários ideais, mas não obrigatório
-        objetivo = []
-        for (turma, disc, dia, horario), var in self.variaveis.items():
-            if eh_horario_ideal(self.disciplinas[disc].tipo, horario):
-                objetivo.append(var)
-        self.model.Maximize(sum(objetivo))
-
     def resolver(self):
-        print("🧠 Resolvendo com Google OR-Tools...")
+        # Definir objetivo SOMENTE se não estiver relaxando
+        if not self.relaxar_horario_ideal:
+            objetivo = []
+            for (turma, disc, dia, horario), var in self.variaveis.items():
+                if eh_horario_ideal(self.disciplinas[disc].tipo, horario):
+                    objetivo.append(var)
+            self.model.Maximize(sum(objetivo))
+        
         status = self.solver.Solve(self.model)
         
         if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
@@ -113,18 +111,4 @@ class GradeHorariaORTools:
                         aulas.append(Aula(turma, disc, profs[0], dia, horario))
             return aulas
         else:
-            # 🔁 TENTATIVA 2: Relaxar restrições — ignorar horário ideal
-            print("⚠️ Nenhuma solução viável com restrições rígidas. Tentando sem otimização...")
-            self.model.ClearObjective()
-            status = self.solver.Solve(self.model)
-            
-            if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-                aulas = []
-                for (turma, disc, dia, horario), var in self.variaveis.items():
-                    if self.solver.BooleanValue(var):
-                        profs = self.atribuicoes_prof.get((turma, disc, dia, horario), [])
-                        if profs:
-                            aulas.append(Aula(turma, disc, profs[0], dia, horario))
-                return aulas
-            else:
-                raise Exception("❌ Nenhuma solução viável encontrada, mesmo relaxando restrições.")
+            raise Exception("❌ Nenhuma solução viável encontrada. Tente relaxar as restrições na aba '⚙️ Configurações'.")
