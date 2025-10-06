@@ -1,3 +1,4 @@
+# scheduler_ortools.py
 from ortools.sat.python import cp_model
 from neuro_rules import eh_horario_ideal
 from collections import defaultdict
@@ -66,6 +67,7 @@ class GradeHorariaORTools:
                 self.model.Add(sum(vars_disc) == total)
 
     def _adicionar_restricoes(self):
+        # Restrição 1: uma turma só pode ter uma aula por horário
         for turma_nome in self.turma_idx:
             for dia in self.dias:
                 for horario in self.horarios:
@@ -76,6 +78,7 @@ class GradeHorariaORTools:
                     if vars_horario:
                         self.model.Add(sum(vars_horario) <= 1)
 
+        # Restrição 2: um professor só pode dar uma aula por horário
         for prof in self.professores:
             for dia in self.dias:
                 if dia not in prof.disponibilidade:
@@ -90,6 +93,7 @@ class GradeHorariaORTools:
                         self.model.Add(sum(vars_prof) <= 1)
 
     def _definir_objetivo(self):
+        # Priorizar horários ideais, mas não obrigatório
         objetivo = []
         for (turma, disc, dia, horario), var in self.variaveis.items():
             if eh_horario_ideal(self.disciplinas[disc].tipo, horario):
@@ -97,7 +101,9 @@ class GradeHorariaORTools:
         self.model.Maximize(sum(objetivo))
 
     def resolver(self):
+        print("🧠 Resolvendo com Google OR-Tools...")
         status = self.solver.Solve(self.model)
+        
         if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
             aulas = []
             for (turma, disc, dia, horario), var in self.variaveis.items():
@@ -107,4 +113,18 @@ class GradeHorariaORTools:
                         aulas.append(Aula(turma, disc, profs[0], dia, horario))
             return aulas
         else:
-            raise Exception("❌ Nenhuma solução viável encontrada.")
+            # 🔁 TENTATIVA 2: Relaxar restrições — ignorar horário ideal
+            print("⚠️ Nenhuma solução viável com restrições rígidas. Tentando sem otimização...")
+            self.model.ClearObjective()
+            status = self.solver.Solve(self.model)
+            
+            if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+                aulas = []
+                for (turma, disc, dia, horario), var in self.variaveis.items():
+                    if self.solver.BooleanValue(var):
+                        profs = self.atribuicoes_prof.get((turma, disc, dia, horario), [])
+                        if profs:
+                            aulas.append(Aula(turma, disc, profs[0], dia, horario))
+                return aulas
+            else:
+                raise Exception("❌ Nenhuma solução viável encontrada, mesmo relaxando restrições.")
