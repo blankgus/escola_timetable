@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Set
 import hashlib
+import uuid
 
 @dataclass
 class Disciplina:
@@ -8,6 +9,7 @@ class Disciplina:
     carga_semanal: int
     tipo: str
     series: List[str]
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
     cor: str = field(init=False)
     
     def __post_init__(self):
@@ -24,18 +26,21 @@ class Professor:
     nome: str
     disciplinas: List[str]
     disponibilidade: Set[str]
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
 class Turma:
     nome: str
     serie: str
     turno: str
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
 class Sala:
     nome: str
     capacidade: int = 30
     tipo: str = "normal"
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
 class Aula:

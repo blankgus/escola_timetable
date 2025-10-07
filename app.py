@@ -8,11 +8,10 @@ from scheduler_ortools import GradeHorariaORTools
 from export import exportar_para_excel, exportar_para_pdf
 import database
 from simple_scheduler import SimpleGradeHoraria
+import uuid
 
-# Inicializar estado da sessão (SEM verificação de login)
 init_session_state()
 
-# Função para aplicar cores nas disciplinas
 def color_disciplina(val):
     if val:
         for d in st.session_state.disciplinas:
@@ -23,7 +22,6 @@ def color_disciplina(val):
 st.set_page_config(page_title="Escola Timetable", layout="wide")
 st.title("🕒 Gerador Inteligente de Grade Horária")
 
-# Abas
 abas = st.tabs(["🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas", "🏫 Salas", "📅 Calendário", "⚙️ Configurações"])
 aba1, aba2, aba3, aba4, aba5, aba6, aba7 = abas
 
@@ -121,7 +119,6 @@ with aba1:
                     st.error(f"❌ Falha total: {str(e2)}")
                     st.stop()
             
-            # Preparar dados
             df = pd.DataFrame([
                 {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario}
                 for a in aulas
@@ -137,7 +134,6 @@ with aba1:
             st.success(f"✅ Grade gerada com {metodo}!")
             st.dataframe(tabela.style.applymap(color_disciplina), use_container_width=True)
             
-            # Exportar
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 tabela.to_excel(writer, sheet_name="Grade")
@@ -148,7 +144,6 @@ with aba1:
             with open(pdf_path, "rb") as f:
                 st.download_button("📄 PDF", f.read(), "grade.pdf")
             
-            # Relatórios
             st.subheader("📊 Relatórios")
             prof_horas = pd.DataFrame([
                 {"Professor": p, "Horas": c} 
@@ -170,20 +165,25 @@ with aba2:
                 st.session_state.disciplinas.append(Disciplina(nome, carga, tipo, series_list))
                 st.rerun()
     
-    for i, d in enumerate(st.session_state.disciplinas[:]):
+    for d in st.session_state.disciplinas[:]:
         with st.expander(f"{d.nome}"):
-            with st.form(f"edit_disc_{i}"):
-                nome = st.text_input("Nome", d.nome, key=f"n_{i}")
-                carga = st.number_input("Carga", 1, 6, d.carga_semanal, key=f"c_{i}")
+            with st.form(f"edit_disc_{d.id}"):
+                nome = st.text_input("Nome", d.nome, key=f"n_{d.id}")
+                carga = st.number_input("Carga", 1, 6, d.carga_semanal, key=f"c_{d.id}")
                 tipo = st.selectbox("Tipo", ["pesada", "media", "leve", "pratica"], 
-                                   index=["pesada", "media", "leve", "pratica"].index(d.tipo), key=f"t_{i}")
-                series = st.text_input("Séries", ", ".join(d.series), key=f"s_{i}")
+                                   index=["pesada", "media", "leve", "pratica"].index(d.tipo), key=f"t_{d.id}")
+                series = st.text_input("Séries", ", ".join(d.series), key=f"s_{d.id}")
                 if st.form_submit_button("💾 Salvar"):
                     series_list = [s.strip() for s in series.split(",") if s.strip()]
-                    st.session_state.disciplinas[i] = Disciplina(nome, carga, tipo, series_list)
+                    st.session_state.disciplinas = [
+                        Disciplina(nome, carga, tipo, series_list, d.id, d.cor) if item.id == d.id else item
+                        for item in st.session_state.disciplinas
+                    ]
                     st.rerun()
                 if st.form_submit_button("🗑️ Excluir"):
-                    st.session_state.disciplinas.pop(i)
+                    st.session_state.disciplinas = [
+                        item for item in st.session_state.disciplinas if item.id != d.id
+                    ]
                     st.rerun()
 
 # =================== ABA 3: PROFESSORES ===================
@@ -199,19 +199,24 @@ with aba3:
                 st.session_state.professores.append(Professor(nome, discs, set(dias)))
                 st.rerun()
     
-    for i, p in enumerate(st.session_state.professores[:]):
+    for p in st.session_state.professores[:]:
         with st.expander(p.nome):
-            with st.form(f"edit_prof_{i}"):
-                nome = st.text_input("Nome", p.nome, key=f"pn_{i}")
+            with st.form(f"edit_prof_{p.id}"):
+                nome = st.text_input("Nome", p.nome, key=f"pn_{p.id}")
                 discs_validas = [d for d in p.disciplinas if d in disc_nomes]
-                discs = st.multiselect("Disciplinas", disc_nomes, default=discs_validas, key=f"pd_{i}")
+                discs = st.multiselect("Disciplinas", disc_nomes, default=discs_validas, key=f"pd_{p.id}")
                 dias = st.multiselect("Disponibilidade", ["seg", "ter", "qua", "qui", "sex"], 
-                                     default=list(p.disponibilidade), key=f"pdias_{i}")
+                                     default=list(p.disponibilidade), key=f"pdias_{p.id}")
                 if st.form_submit_button("💾 Salvar"):
-                    st.session_state.professores[i] = Professor(nome, discs, set(dias))
+                    st.session_state.professores = [
+                        Professor(nome, discs, set(dias), p.id) if item.id == p.id else item
+                        for item in st.session_state.professores
+                    ]
                     st.rerun()
                 if st.form_submit_button("🗑️ Excluir"):
-                    st.session_state.professores.pop(i)
+                    st.session_state.professores = [
+                        item for item in st.session_state.professores if item.id != p.id
+                    ]
                     st.rerun()
 
 # =================== ABA 4: TURMAS ===================
@@ -226,18 +231,23 @@ with aba4:
                 st.session_state.turmas.append(Turma(nome, serie, turno))
                 st.rerun()
     
-    for i, t in enumerate(st.session_state.turmas[:]):
+    for t in st.session_state.turmas[:]:
         with st.expander(f"{t.nome}"):
-            with st.form(f"edit_turma_{i}"):
-                nome = st.text_input("Nome", t.nome, key=f"tn_{i}")
-                serie = st.text_input("Série", t.serie, key=f"ts_{i}")
+            with st.form(f"edit_turma_{t.id}"):
+                nome = st.text_input("Nome", t.nome, key=f"tn_{t.id}")
+                serie = st.text_input("Série", t.serie, key=f"ts_{t.id}")
                 turno = st.selectbox("Turno", ["manha", "tarde"], 
-                                    index=["manha", "tarde"].index(t.turno), key=f"tt_{i}")
+                                    index=["manha", "tarde"].index(t.turno), key=f"tt_{t.id}")
                 if st.form_submit_button("💾 Salvar"):
-                    st.session_state.turmas[i] = Turma(nome, serie, turno)
+                    st.session_state.turmas = [
+                        Turma(nome, serie, turno, t.id) if item.id == t.id else item
+                        for item in st.session_state.turmas
+                    ]
                     st.rerun()
                 if st.form_submit_button("🗑️ Excluir"):
-                    st.session_state.turmas.pop(i)
+                    st.session_state.turmas = [
+                        item for item in st.session_state.turmas if item.id != t.id
+                    ]
                     st.rerun()
 
 # =================== ABA 5: SALAS ===================
@@ -252,18 +262,23 @@ with aba5:
                 st.session_state.salas.append(Sala(nome, cap, tipo))
                 st.rerun()
     
-    for i, s in enumerate(st.session_state.salas[:]):
+    for s in st.session_state.salas[:]:
         with st.expander(s.nome):
-            with st.form(f"edit_sala_{i}"):
-                nome = st.text_input("Nome", s.nome, key=f"sn_{i}")
-                cap = st.number_input("Capacidade", 1, 100, s.capacidade, key=f"sc_{i}")
+            with st.form(f"edit_sala_{s.id}"):
+                nome = st.text_input("Nome", s.nome, key=f"sn_{s.id}")
+                cap = st.number_input("Capacidade", 1, 100, s.capacidade, key=f"sc_{s.id}")
                 tipo = st.selectbox("Tipo", ["normal", "laboratório", "auditório"], 
-                                   index=["normal", "laboratório", "auditório"].index(s.tipo), key=f"st_{i}")
+                                   index=["normal", "laboratório", "auditório"].index(s.tipo), key=f"st_{s.id}")
                 if st.form_submit_button("💾 Salvar"):
-                    st.session_state.salas[i] = Sala(nome, cap, tipo)
+                    st.session_state.salas = [
+                        Sala(nome, cap, tipo, s.id) if item.id == s.id else item
+                        for item in st.session_state.salas
+                    ]
                     st.rerun()
                 if st.form_submit_button("🗑️ Excluir"):
-                    st.session_state.salas.pop(i)
+                    st.session_state.salas = [
+                        item for item in st.session_state.salas if item.id != s.id
+                    ]
                     st.rerun()
 
 # =================== ABA 6: CALENDÁRIO ===================
@@ -275,18 +290,29 @@ with aba6:
         fim = st.date_input("Fim")
         if st.form_submit_button("➕ Adicionar"):
             if nome:
-                st.session_state.periodos.append({"nome": nome, "inicio": str(inicio), "fim": str(fim)})
+                st.session_state.periodos.append({
+                    "nome": nome,
+                    "inicio": str(inicio),
+                    "fim": str(fim),
+                    "id": str(uuid.uuid4())
+                })
                 st.rerun()
     
-    for i, p in enumerate(st.session_state.periodos[:]):
+    for p in st.session_state.periodos[:]:
         with st.expander(p["nome"]):
-            with st.form(f"edit_periodo_{i}"):
-                nome = st.text_input("Nome", p["nome"], key=f"pn_{i}")
-                inicio = st.date_input("Início", value=pd.to_datetime(p["inicio"]), key=f"pi_{i}")
-                fim = st.date_input("Fim", value=pd.to_datetime(p["fim"]), key=f"pf_{i}")
+            with st.form(f"edit_periodo_{p['id']}"):
+                nome = st.text_input("Nome", p["nome"], key=f"pn_{p['id']}")
+                inicio = st.date_input("Início", value=pd.to_datetime(p["inicio"]), key=f"pi_{p['id']}")
+                fim = st.date_input("Fim", value=pd.to_datetime(p["fim"]), key=f"pf_{p['id']}")
                 if st.form_submit_button("💾 Salvar"):
-                    st.session_state.periodos[i] = {"nome": nome, "inicio": str(inicio), "fim": str(fim)}
+                    st.session_state.periodos = [
+                        {**item, "nome": nome, "inicio": str(inicio), "fim": str(fim)} 
+                        if item["id"] == p["id"] else item
+                        for item in st.session_state.periodos
+                    ]
                     st.rerun()
                 if st.form_submit_button("🗑️ Excluir"):
-                    st.session_state.periodos.pop(i)
+                    st.session_state.periodos = [
+                        item for item in st.session_state.periodos if item["id"] != p["id"]
+                    ]
                     st.rerun()

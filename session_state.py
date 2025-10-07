@@ -1,6 +1,7 @@
 import streamlit as st
 from models import Turma, Professor, Disciplina, Sala
 import database
+import uuid
 
 def init_session_state():
     database.init_db()
@@ -56,9 +57,13 @@ def init_session_state():
         ]
     
     if "periodos" not in st.session_state:
-        st.session_state.periodos = database.carregar_periodos() or [
-            {"nome": "1º Bimestre", "inicio": "2025-02-01", "fim": "2025-03-31"},
-            {"nome": "2º Bimestre", "inicio": "2025-04-01", "fim": "2025-05-31"},
-            {"nome": "3º Bimestre", "inicio": "2025-06-01", "fim": "2025-07-31"},
-            {"nome": "4º Bimestre", "inicio": "2025-08-01", "fim": "2025-09-30"},
-        ]
+        periodos_db = database.carregar_periodos()
+        if periodos_db:
+            st.session_state.periodos = periodos_db
+        else:
+            st.session_state.periodos = [
+                {"nome": "1º Bimestre", "inicio": "2025-02-01", "fim": "2025-03-31", "id": str(uuid.uuid4())},
+                {"nome": "2º Bimestre", "inicio": "2025-04-01", "fim": "2025-05-31", "id": str(uuid.uuid4())},
+                {"nome": "3º Bimestre", "inicio": "2025-06-01", "fim": "2025-07-31", "id": str(uuid.uuid4())},
+                {"nome": "4º Bimestre", "inicio": "2025-08-01", "fim": "2025-09-30", "id": str(uuid.uuid4())},
+            ]
