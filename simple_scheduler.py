@@ -1,4 +1,3 @@
-# simple_scheduler.py
 from models import Aula
 from collections import defaultdict
 import random
@@ -9,7 +8,7 @@ class SimpleGradeHoraria:
         self.professores = {p.nome: p for p in professores}
         self.disciplinas = {d.nome: d for d in disciplinas}
         self.dias = ["seg", "ter", "qua", "qui", "sex"]
-        self.horarios = [1, 2, 3, 5, 6, 7]  # Horários úteis (recreio na posição 4)
+        self.horarios = [1, 2, 3, 5, 6, 7]
         
         self.carga_turma = defaultdict(lambda: defaultdict(int))
         for turma in turmas:

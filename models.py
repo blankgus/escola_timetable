@@ -9,7 +9,7 @@ class Disciplina:
     tipo: str
     series: List[str]
     cor_fundo: str = "#4A90E2"
-    cor_fonte: str = "white"
+    cor_fonte: str = "#FFFFFF"
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass

@@ -1,5 +1,5 @@
 import streamlit as st
-from models import Turma, Professor, Disciplina, Sala, Feriado
+from models import Turma, Professor, Disciplina, Sala
 import database
 import uuid
 
@@ -33,19 +33,19 @@ def init_session_state():
     
     if "disciplinas" not in st.session_state:
         st.session_state.disciplinas = database.carregar_disciplinas() or [
-            Disciplina("Matemática", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"]),
-            Disciplina("Português", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"]),
-            Disciplina("Ciências", 3, "media", ["6ano", "7ano", "8ano"]),
-            Disciplina("Biologia", 3, "media", ["9ano", "1em", "2em", "3em"]),
-            Disciplina("Física", 3, "pesada", ["2em", "3em"]),
-            Disciplina("Química", 3, "pesada", ["9ano", "1em", "2em", "3em"]),
-            Disciplina("História", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"]),
-            Disciplina("Geografia", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em"]),
-            Disciplina("Inglês", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"]),
-            Disciplina("Artes", 1, "leve", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"]),
-            Disciplina("Educação Física", 2, "pratica", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"]),
-            Disciplina("Filosofia", 2, "leve", ["1em", "2em", "3em"]),
-            Disciplina("Sociologia", 2, "leve", ["2em", "3em"]),
+            Disciplina("Matemática", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "#4A90E2", "#FFFFFF"),
+            Disciplina("Português", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "#D35400", "#FFFFFF"),
+            Disciplina("Ciências", 3, "media", ["6ano", "7ano", "8ano"], "#1ABC9C", "#000000"),
+            Disciplina("Biologia", 3, "media", ["9ano", "1em", "2em", "3em"], "#27AE60", "#FFFFFF"),
+            Disciplina("Física", 3, "pesada", ["2em", "3em"], "#8E44AD", "#FFFFFF"),
+            Disciplina("Química", 3, "pesada", ["9ano", "1em", "2em", "3em"], "#2980B9", "#FFFFFF"),
+            Disciplina("História", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "#C0392B", "#FFFFFF"),
+            Disciplina("Geografia", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em"], "#F39C12", "#000000"),
+            Disciplina("Inglês", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "#2C3E50", "#FFFFFF"),
+            Disciplina("Artes", 1, "leve", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "#E67E22", "#FFFFFF"),
+            Disciplina("Educação Física", 2, "pratica", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "#2ECC71", "#000000"),
+            Disciplina("Filosofia", 2, "leve", ["1em", "2em", "3em"], "#9B59B6", "#FFFFFF"),
+            Disciplina("Sociologia", 2, "leve", ["2em", "3em"], "#16A085", "#FFFFFF"),
         ]
     
     if "salas" not in st.session_state:
