@@ -8,7 +8,8 @@ class Disciplina:
     carga_semanal: int
     tipo: str
     series: List[str]
-    cor: str = "#4A90E2"  # Cor padrão azul
+    cor_fundo: str = "#4A90E2"
+    cor_fonte: str = "white"
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
@@ -39,3 +40,9 @@ class Aula:
     professor: str
     dia: str
     horario: int
+
+@dataclass
+class Feriado:
+    data: str
+    motivo: str
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))

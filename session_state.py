@@ -1,5 +1,5 @@
 import streamlit as st
-from models import Turma, Professor, Disciplina, Sala
+from models import Turma, Professor, Disciplina, Sala, Feriado
 import database
 import uuid
 
@@ -66,4 +66,20 @@ def init_session_state():
                 {"nome": "2º Bimestre", "inicio": "2025-04-01", "fim": "2025-05-31", "id": str(uuid.uuid4())},
                 {"nome": "3º Bimestre", "inicio": "2025-06-01", "fim": "2025-07-31", "id": str(uuid.uuid4())},
                 {"nome": "4º Bimestre", "inicio": "2025-08-01", "fim": "2025-09-30", "id": str(uuid.uuid4())},
+            ]
+    
+    if "feriados" not in st.session_state:
+        feriados_db = database.carregar_feriados()
+        if feriados_db:
+            st.session_state.feriados = feriados_db
+        else:
+            st.session_state.feriados = [
+                {"data": "2025-01-01", "motivo": "Ano Novo", "id": str(uuid.uuid4())},
+                {"data": "2025-04-21", "motivo": "Tiradentes", "id": str(uuid.uuid4())},
+                {"data": "2025-05-01", "motivo": "Dia do Trabalho", "id": str(uuid.uuid4())},
+                {"data": "2025-09-07", "motivo": "Independência", "id": str(uuid.uuid4())},
+                {"data": "2025-10-12", "motivo": "Nossa Sra. Aparecida", "id": str(uuid.uuid4())},
+                {"data": "2025-11-02", "motivo": "Finados", "id": str(uuid.uuid4())},
+                {"data": "2025-11-15", "motivo": "Proclamação da República", "id": str(uuid.uuid4())},
+                {"data": "2025-12-25", "motivo": "Natal", "id": str(uuid.uuid4())},
             ]
