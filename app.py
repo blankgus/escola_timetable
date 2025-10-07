@@ -10,13 +10,29 @@ import database
 from simple_scheduler import SimpleGradeHoraria
 import uuid
 
+# Horários reais da escola (ajuste conforme sua necessidade)
+HORARIOS_REAIS = {
+    1: "07:00-07:50",
+    2: "07:50-08:40",
+    3: "08:40-09:30",
+    4: "10:00-10:50",  # Após recreio (30 min)
+    5: "10:50-11:40",
+    6: "11:40-12:30"
+}
+
 init_session_state()
 
 def color_disciplina(val):
+    """Aplica cor de fundo e garante contraste do texto"""
     if val:
         for d in st.session_state.disciplinas:
             if d.nome == val:
-                return f'background-color: {d.cor}; color: white; font-weight: bold'
+                # Extrair componentes RGB
+                r, g, b = int(d.cor[1:3], 16), int(d.cor[3:5], 16), int(d.cor[5:7], 16)
+                # Calcular luminância relativa
+                luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+                cor_texto = "black" if luminancia > 0.5 else "white"
+                return f'background-color: {d.cor}; color: {cor_texto}; font-weight: bold'
     return ''
 
 st.set_page_config(page_title="Escola Timetable", layout="wide")
@@ -119,6 +135,7 @@ with aba1:
                     st.error(f"❌ Falha total: {str(e2)}")
                     st.stop()
             
+            # Preparar dados com horários reais
             df = pd.DataFrame([
                 {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario}
                 for a in aulas
@@ -131,9 +148,17 @@ with aba1:
                 fill_value=""
             ).reindex(columns=["seg", "ter", "qua", "qui", "sex"], fill_value="")
             
+            # Converter para horários reais
+            novo_indice = []
+            for turma, horario_num in tabela.index:
+                horario_real = HORARIOS_REAIS.get(horario_num, f"{horario_num}ª aula")
+                novo_indice.append((turma, horario_real))
+            tabela.index = pd.MultiIndex.from_tuples(novo_indice)
+            
             st.success(f"✅ Grade gerada com {metodo}!")
             st.dataframe(tabela.style.applymap(color_disciplina), use_container_width=True)
             
+            # Exportar
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 tabela.to_excel(writer, sheet_name="Grade")
@@ -159,10 +184,11 @@ with aba2:
         carga = st.number_input("Carga", 1, 6, 3)
         tipo = st.selectbox("Tipo", ["pesada", "media", "leve", "pratica"])
         series = st.text_input("Séries", "6ano,7ano,8ano,9ano,1em,2em,3em")
+        cor = st.color_picker("Cor", "#4A90E2")  # Cor padrão
         if st.form_submit_button("➕ Adicionar"):
             if nome:
                 series_list = [s.strip() for s in series.split(",") if s.strip()]
-                st.session_state.disciplinas.append(Disciplina(nome, carga, tipo, series_list))
+                st.session_state.disciplinas.append(Disciplina(nome, carga, tipo, series_list, cor))
                 st.rerun()
     
     for d in st.session_state.disciplinas[:]:
@@ -173,10 +199,11 @@ with aba2:
                 tipo = st.selectbox("Tipo", ["pesada", "media", "leve", "pratica"], 
                                    index=["pesada", "media", "leve", "pratica"].index(d.tipo), key=f"t_{d.id}")
                 series = st.text_input("Séries", ", ".join(d.series), key=f"s_{d.id}")
+                cor = st.color_picker("Cor", d.cor, key=f"cor_{d.id}")  # ← EDITÁVEL
                 if st.form_submit_button("💾 Salvar"):
                     series_list = [s.strip() for s in series.split(",") if s.strip()]
                     st.session_state.disciplinas = [
-                        Disciplina(nome, carga, tipo, series_list, d.id, d.cor) if item.id == d.id else item
+                        Disciplina(nome, carga, tipo, series_list, cor, d.id) if item.id == d.id else item
                         for item in st.session_state.disciplinas
                     ]
                     st.rerun()
