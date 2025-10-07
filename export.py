@@ -9,18 +9,18 @@ def exportar_para_excel(aulas, caminho="grade_horaria.xlsx"):
         for a in aulas
     ])
     
-    # Mapear horários para rótulos reais
+    # Mapear horários numéricos para rótulos reais
     HORARIOS_REAIS = {
         1: "07:00-07:50",
         2: "07:50-08:40",
         3: "08:40-09:30",
-        4: "09:30-10:00",  # RECREIO
+        4: "09:30-10:00",  # RECREIO (vazia)
         5: "10:00-10:50",
         6: "10:50-11:40",
         7: "11:40-12:30"
     }
     
-    # Converter horários numéricos para reais
+    # Converter coluna "Horário" para rótulo real
     df["Horário"] = df["Horário"].map(HORARIOS_REAIS).fillna("Horário Inválido")
     
     # Criar tabela pivot
@@ -32,7 +32,7 @@ def exportar_para_excel(aulas, caminho="grade_horaria.xlsx"):
         fill_value=""
     ).reindex(columns=["seg", "ter", "qua", "qui", "sex"], fill_value="")
     
-    # Salvar Excel
+    # Salvar no Excel
     with pd.ExcelWriter(caminho, engine='openpyxl') as writer:
         tabela.to_excel(writer, sheet_name="Grade por Turma")
         df.to_excel(writer, sheet_name="Dados Brutos", index=False)
@@ -53,9 +53,13 @@ def exportar_para_pdf(aulas, caminho="grade_horaria.pdf"):
     
     # Horários reais para PDF
     HORARIOS_REAIS = {
-        1: "07:00", 2: "07:50", 3: "08:40", 
-        4: "09:30 (Recreio)", 
-        5: "10:00", 6: "10:50", 7: "11:40"
+        1: "07:00-07:50",
+        2: "07:50-08:40",
+        3: "08:40-09:30",
+        4: "09:30-10:00",  # RECREIO (não mostrar no PDF)
+        5: "10:00-10:50",
+        6: "10:50-11:40",
+        7: "11:40-12:30"
     }
     
     for turma in sorted(turmas_aulas.keys()):
@@ -65,10 +69,9 @@ def exportar_para_pdf(aulas, caminho="grade_horaria.pdf"):
         # Ordenar aulas por dia e horário
         aulas_ordenadas = sorted(turmas_aulas[turma], key=lambda x: (x.dia, x.horario))
         for aula in aulas_ordenadas:
-            horario_real = HORARIOS_REAIS.get(aula.horario, f"{aula.horario}ª aula")
-            # Pular recreio (não mostrar no PDF)
-            if aula.horario == 4:
+            if aula.horario == 4:  # Pular recreio
                 continue
+            horario_real = HORARIOS_REAIS.get(aula.horario, f"{aula.horario}ª aula")
             linha = f"{aula.dia.upper()} {horario_real}: {aula.disciplina} - Prof. {aula.professor}"
             pdf.cell(0, 6, txt=linha, ln=True)
         pdf.ln(5)
