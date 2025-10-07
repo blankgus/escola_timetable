@@ -3,7 +3,7 @@ from fpdf import FPDF
 
 def exportar_para_excel(aulas, caminho="grade_horaria.xlsx"):
     df = pd.DataFrame([
-        {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario}
+        {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala}
         for a in aulas
     ])
     
@@ -63,45 +63,41 @@ def exportar_para_pdf(aulas, caminho="grade_horaria.pdf"):
             if aula.horario == 4:
                 continue
             horario_real = HORARIOS_REAIS.get(aula.horario, f"{aula.horario}ª aula")
-            linha = f"{aula.dia.upper()} {horario_real}: {aula.disciplina} - Prof. {aula.professor}"
+            linha = f"{aula.dia.upper()} {horario_real}: {aula.disciplina} - Prof. {aula.professor} ({aula.sala})"
             pdf.cell(0, 6, txt=linha, ln=True)
         pdf.ln(5)
-
-
-
+    
+    pdf.output(caminho)
+    return caminho
 
 def gerar_relatorio_professor(aulas, professor_nome):
     """Gera relatório semanal de um professor específico"""
-    # Filtrar aulas do professor
     aulas_prof = [a for a in aulas if a.professor == professor_nome]
     
-    # Criar estrutura de grade semanal
-    dias_semana = ["seg", "ter", "qua", "qui", "sex"]
-    horarios_reais = {
+    if not aulas_prof:
+        return f"Professor {professor_nome} não tem aulas cadastradas."
+    
+    HORARIOS_REAIS = {
         1: "07:00-07:50",
         2: "07:50-08:40", 
         3: "08:40-09:30",
-        4: "09:30-10:00",  # Recreio
+        4: "09:30-10:00",
         5: "10:00-10:50",
         6: "10:50-11:40",
         7: "11:40-12:30"
     }
     
-    # Criar DataFrame
     dados = []
     for aula in aulas_prof:
         dados.append({
             "Dia": aula.dia.upper(),
-            "Horário": horarios_reais[aula.horario],
+            "Horário": HORARIOS_REAIS[aula.horario],
             "Disciplina": aula.disciplina,
-            "Turma": aula.turma
+            "Turma": aula.turma,
+            "Sala": aula.sala
         })
     
-    if not dados:
-        return f"Professor {professor_nome} não tem aulas cadastradas."
-    
     df = pd.DataFrame(dados)
-    # Ordenar por dia e horário
     ordem_dias = {"SEG": 0, "TER": 1, "QUA": 2, "QUI": 3, "SEX": 4}
     df["ordem_dia"] = df["Dia"].map(ordem_dias)
     df = df.sort_values(["ordem_dia", "Horário"]).drop("ordem_dia", axis=1)
@@ -117,6 +113,36 @@ def gerar_relatorio_todos_professores(aulas):
         relatorios[prof] = gerar_relatorio_professor(aulas, prof)
     
     return relatorios
+
+def gerar_relatorio_disciplina_sala(aulas):
+    """Gera relatório de disciplina x sala x semana"""
+    if not aulas:
+        return "Nenhuma aula cadastrada."
     
-    pdf.output(caminho)
-    return caminho
+    HORARIOS_REAIS = {
+        1: "07:00-07:50",
+        2: "07:50-08:40", 
+        3: "08:40-09:30",
+        4: "09:30-10:00",
+        5: "10:00-10:50",
+        6: "10:50-11:40",
+        7: "11:40-12:30"
+    }
+    
+    dados = []
+    for aula in aulas:
+        dados.append({
+            "Disciplina": aula.disciplina,
+            "Sala": aula.sala,
+            "Dia": aula.dia.upper(),
+            "Horário": HORARIOS_REAIS[aula.horario],
+            "Turma": aula.turma,
+            "Professor": aula.professor
+        })
+    
+    df = pd.DataFrame(dados)
+    ordem_dias = {"SEG": 0, "TER": 1, "QUA": 2, "QUI": 3, "SEX": 4}
+    df["ordem_dia"] = df["Dia"].map(ordem_dias)
+    df = df.sort_values(["Disciplina", "Sala", "ordem_dia", "Horário"]).drop("ordem_dia", axis=1)
+    
+    return df

@@ -40,7 +40,7 @@ class Aula:
     professor: str
     dia: str
     horario: int
-    sala: str = "Sala 1"  # Sala padrão
+    sala: str = "Sala 1"  # ← NOVO CAMPO!
 
 @dataclass
 class Feriado:

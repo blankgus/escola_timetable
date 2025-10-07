@@ -6,7 +6,7 @@ import traceback
 from session_state import init_session_state
 from models import Turma, Professor, Disciplina, Sala
 from scheduler_ortools import GradeHorariaORTools
-from export import exportar_para_excel, exportar_para_pdf
+from export import exportar_para_excel, exportar_para_pdf, gerar_relatorio_professor, gerar_relatorio_todos_professores, gerar_relatorio_disciplina_sala
 import database
 from simple_scheduler import SimpleGradeHoraria
 import uuid
@@ -346,7 +346,7 @@ with aba1:
                     st.stop()
             
             df = pd.DataFrame([
-                {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario}
+                {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala}
                 for a in aulas
             ])
             tabela = df.pivot_table(
@@ -382,3 +382,54 @@ with aba1:
                 for p, c in pd.Series([a.professor for a in aulas]).value_counts().items()
             ])
             st.dataframe(prof_horas, use_container_width=True)
+
+            # 🔥 RELATÓRIOS AVANÇADOS
+            st.divider()
+            st.subheader("📋 Relatórios Avançados")
+
+            # Relatório por professor
+            st.markdown("### 👨‍🏫 Relatório por Professor")
+            professores_lista = sorted(list(set(a.professor for a in aulas)))
+            if professores_lista:
+                prof_selecionado = st.selectbox("Selecione o professor", professores_lista)
+                rel_prof = gerar_relatorio_professor(aulas, prof_selecionado)
+                if isinstance(rel_prof, pd.DataFrame):
+                    st.dataframe(rel_prof, use_container_width=True)
+                else:
+                    st.info(rel_prof)
+            else:
+                st.info("Nenhum professor com aulas encontradas.")
+
+            # Relatório disciplina x sala
+            st.markdown("### 📚 Relatório Disciplina x Sala")
+            rel_disc_sala = gerar_relatorio_disciplina_sala(aulas)
+            if isinstance(rel_disc_sala, pd.DataFrame):
+                st.dataframe(rel_disc_sala, use_container_width=True)
+            else:
+                st.info(rel_disc_sala)
+
+            # Botão para exportar relatórios
+            if st.button("📤 Exportar Relatórios Completos"):
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    # Grade principal
+                    tabela.to_excel(writer, sheet_name="Grade Principal")
+                    df.to_excel(writer, sheet_name="Dados Brutos", index=False)
+                    
+                    # Relatórios por professor
+                    rel_todos = gerar_relatorio_todos_professores(aulas)
+                    for prof, df_prof in rel_todos.items():
+                        if isinstance(df_prof, pd.DataFrame):
+                            nome_aba = f"Prof_{prof[:28]}"  # Limite de 31 caracteres
+                            df_prof.to_excel(writer, sheet_name=nome_aba, index=False)
+                    
+                    # Relatório disciplina x sala
+                    if isinstance(rel_disc_sala, pd.DataFrame):
+                        rel_disc_sala.to_excel(writer, sheet_name="Disciplina_x_Sala", index=False)
+                
+                st.download_button(
+                    "📥 Baixar Relatórios Completos",
+                    output.getvalue(),
+                    "relatorios_completos.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
