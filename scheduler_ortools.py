@@ -2,6 +2,7 @@ from ortools.sat.python import cp_model
 from neuro_rules import eh_horario_ideal
 from collections import defaultdict
 from models import Aula
+import streamlit as st
 
 class GradeHorariaORTools:
     def __init__(self, turmas, professores, disciplinas, relaxar_horario_ideal=False):
@@ -106,8 +107,11 @@ class GradeHorariaORTools:
             for (turma, disc, dia, horario), var in self.variaveis.items():
                 if self.solver.BooleanValue(var):
                     profs = self.atribuicoes_prof.get((turma, disc, dia, horario), [])
+                    # ← ATRIBUIR SALA
+                    salas = st.session_state.salas if 'salas' in st.session_state else []
+                    sala_nome = salas[0].nome if salas else "Sala 1"
                     if profs:
-                        aulas.append(Aula(turma, disc, profs[0], dia, horario))
+                        aulas.append(Aula(turma, disc, profs[0], dia, horario, sala_nome))
             return aulas
         else:
             raise Exception("❌ Nenhuma solução viável encontrada.")
