@@ -4,9 +4,9 @@ import pandas as pd
 import io
 import traceback
 from session_state import init_session_state
-from models import Turma, Professor, Disciplina, Sala
+from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA
 from scheduler_ortools import GradeHorariaORTools
-from export import exportar_para_excel, exportar_para_pdf, gerar_relatorio_professor, gerar_relatorio_todos_professores, gerar_relatorio_disciplina_sala
+from export import exportar_para_excel, exportar_para_pdf, gerar_relatorio_professor, gerar_relatorio_todos_professores, gerar_relatorio_disciplina_sala, gerar_grade_por_turma_semana, gerar_grade_por_sala_semana
 import database
 from simple_scheduler import SimpleGradeHoraria
 import uuid
@@ -88,7 +88,8 @@ with aba3:
     with st.form("add_prof"):
         nome = st.text_input("Nome")
         discs = st.multiselect("Disciplinas", disc_nomes)
-        dias = st.multiselect("Disponibilidade", ["seg", "ter", "qua", "qui", "sex"], default=["seg", "ter", "qua", "qui", "sex"])
+        # ← 7 dias da semana
+        dias = st.multiselect("Disponibilidade", DIAS_SEMANA, default=["seg", "ter", "qua", "qui", "sex"])
         if st.form_submit_button("➕ Adicionar"):
             if nome and discs:
                 st.session_state.professores.append(Professor(nome, discs, set(dias)))
@@ -100,7 +101,7 @@ with aba3:
                 nome = st.text_input("Nome", p.nome, key=f"pn_{p.id}")
                 discs_validas = [d for d in p.disciplinas if d in disc_nomes]
                 discs = st.multiselect("Disciplinas", disc_nomes, default=discs_validas, key=f"pd_{p.id}")
-                dias = st.multiselect("Disponibilidade", ["seg", "ter", "qua", "qui", "sex"], 
+                dias = st.multiselect("Disponibilidade", DIAS_SEMANA, 
                                      default=list(p.disponibilidade), key=f"pdias_{p.id}")
                 col1, col2 = st.columns(2)
                 if col1.form_submit_button("💾 Salvar"):
@@ -355,7 +356,7 @@ with aba1:
                 values="Disciplina",
                 aggfunc=lambda x: x.iloc[0],
                 fill_value=""
-            ).reindex(columns=["seg", "ter", "qua", "qui", "sex"], fill_value="")
+            ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="")
             
             novo_indice = []
             for turma, horario_num in tabela.index:
@@ -408,8 +409,34 @@ with aba1:
             else:
                 st.info(rel_disc_sala)
 
-            # Botão para exportar relatórios
-            if st.button("📤 Exportar Relatórios Completos"):
+            # 🔥 RELATÓRIOS POR SEMANA (5 SEMANAS)
+            st.divider()
+            st.subheader("📅 Relatórios por Semana (5 semanas)")
+            
+            cor_feriado = st.color_picker("Cor para Feriados", "#FFCCCC")
+            
+            # Relatório por Turma - 5 Semanas
+            st.markdown("### 🎒 Grade por Turma (5 Semanas)")
+            turmas_lista = sorted(list(set(a.turma for a in aulas)))
+            if turmas_lista:
+                turma_selecionada = st.selectbox("Selecione a turma", turmas_lista, key="turma_semana")
+                for semana in range(1, 6):
+                    st.markdown(f"#### Semana {semana}")
+                    df_turma = gerar_grade_por_turma_semana(aulas, turma_selecionada)
+                    st.dataframe(df_turma.style.applymap(color_disciplina), use_container_width=True)
+            
+            # Relatório por Sala - 5 Semanas
+            st.markdown("### 🏫 Ocupação por Sala (5 Semanas)")
+            salas_lista = sorted(list(set(a.sala for a in aulas)))
+            if salas_lista:
+                sala_selecionada = st.selectbox("Selecione a sala", salas_lista, key="sala_semana")
+                for semana in range(1, 6):
+                    st.markdown(f"#### Semana {semana}")
+                    df_sala = gerar_grade_por_sala_semana(aulas, sala_selecionada)
+                    st.dataframe(df_sala, use_container_width=True)
+
+            # Botão para exportar todos os relatórios
+            if st.button("📤 Exportar Todos os Relatórios"):
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     # Grade principal
@@ -420,16 +447,30 @@ with aba1:
                     rel_todos = gerar_relatorio_todos_professores(aulas)
                     for prof, df_prof in rel_todos.items():
                         if isinstance(df_prof, pd.DataFrame):
-                            nome_aba = f"Prof_{prof[:28]}"  # Limite de 31 caracteres
+                            nome_aba = f"Prof_{prof[:28]}"
                             df_prof.to_excel(writer, sheet_name=nome_aba, index=False)
                     
                     # Relatório disciplina x sala
                     if isinstance(rel_disc_sala, pd.DataFrame):
                         rel_disc_sala.to_excel(writer, sheet_name="Disciplina_x_Sala", index=False)
+                    
+                    # Relatórios semanais por turma
+                    for turma in turmas_lista:
+                        for semana in range(1, 6):
+                            df = gerar_grade_por_turma_semana(aulas, turma)
+                            nome_aba = f"Turma_{turma}_Sem{semana}"[:31]
+                            df.to_excel(writer, sheet_name=nome_aba)
+                    
+                    # Relatórios semanais por sala
+                    for sala in salas_lista:
+                        for semana in range(1, 6):
+                            df = gerar_grade_por_sala_semana(aulas, sala)
+                            nome_aba = f"Sala_{sala}_Sem{semana}"[:31]
+                            df.to_excel(writer, sheet_name=nome_aba)
                 
                 st.download_button(
-                    "📥 Baixar Relatórios Completos",
+                    "📥 Baixar Todos os Relatórios",
                     output.getvalue(),
-                    "relatorios_completos.xlsx",
+                    "todos_relatorios.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )

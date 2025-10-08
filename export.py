@@ -25,7 +25,7 @@ def exportar_para_excel(aulas, caminho="grade_horaria.xlsx"):
         values="Disciplina",
         aggfunc=lambda x: x.iloc[0],
         fill_value=""
-    ).reindex(columns=["seg", "ter", "qua", "qui", "sex"], fill_value="")
+    ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="")
     
     with pd.ExcelWriter(caminho, engine='openpyxl') as writer:
         tabela.to_excel(writer, sheet_name="Grade por Turma")
@@ -71,7 +71,6 @@ def exportar_para_pdf(aulas, caminho="grade_horaria.pdf"):
     return caminho
 
 def gerar_relatorio_professor(aulas, professor_nome):
-    """Gera relatório semanal de um professor específico"""
     aulas_prof = [a for a in aulas if a.professor == professor_nome]
     
     if not aulas_prof:
@@ -98,14 +97,13 @@ def gerar_relatorio_professor(aulas, professor_nome):
         })
     
     df = pd.DataFrame(dados)
-    ordem_dias = {"SEG": 0, "TER": 1, "QUA": 2, "QUI": 3, "SEX": 4}
+    ordem_dias = {"DOM": 0, "SEG": 1, "TER": 2, "QUA": 3, "QUI": 4, "SEX": 5, "SAB": 6}
     df["ordem_dia"] = df["Dia"].map(ordem_dias)
     df = df.sort_values(["ordem_dia", "Horário"]).drop("ordem_dia", axis=1)
     
     return df
 
 def gerar_relatorio_todos_professores(aulas):
-    """Gera relatório de todos os professores"""
     professores = list(set(a.professor for a in aulas))
     relatorios = {}
     
@@ -115,7 +113,6 @@ def gerar_relatorio_todos_professores(aulas):
     return relatorios
 
 def gerar_relatorio_disciplina_sala(aulas):
-    """Gera relatório de disciplina x sala x semana"""
     if not aulas:
         return "Nenhuma aula cadastrada."
     
@@ -141,8 +138,60 @@ def gerar_relatorio_disciplina_sala(aulas):
         })
     
     df = pd.DataFrame(dados)
-    ordem_dias = {"SEG": 0, "TER": 1, "QUA": 2, "QUI": 3, "SEX": 4}
+    ordem_dias = {"DOM": 0, "SEG": 1, "TER": 2, "QUA": 3, "QUI": 4, "SEX": 5, "SAB": 6}
     df["ordem_dia"] = df["Dia"].map(ordem_dias)
     df = df.sort_values(["Disciplina", "Sala", "ordem_dia", "Horário"]).drop("ordem_dia", axis=1)
     
     return df
+
+def gerar_grade_por_turma_semana(aulas, turma_nome, semana=1, cor_feriado="#FF0000"):
+    dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]
+    horarios = [1, 2, 3, 5, 6, 7]
+    
+    grade = {dia: {h: "" for h in horarios} for dia in dias}
+    
+    for aula in aulas:
+        if aula.turma == turma_nome and aula.horario in horarios and aula.dia in dias:
+            grade[aula.dia][aula.horario] = aula.disciplina
+    
+    df = pd.DataFrame(grade).T
+    df.index.name = "Dia"
+    
+    HORARIOS_REAIS = {1: "07:00-07:50", 2: "07:50-08:40", 3: "08:40-09:30", 5: "10:00-10:50", 6: "10:50-11:40", 7: "11:40-12:30"}
+    df.index = [HORARIOS_REAIS.get(h, h) for h in df.index]
+    
+    return df
+
+def gerar_grade_por_sala_semana(aulas, sala_nome, semana=1, cor_feriado="#FF0000"):
+    dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]
+    horarios = [1, 2, 3, 5, 6, 7]
+    
+    grade = {dia: {h: "" for h in horarios} for dia in dias}
+    
+    for aula in aulas:
+        if aula.sala == sala_nome and aula.horario in horarios and aula.dia in dias:
+            grade[aula.dia][aula.horario] = f"{aula.disciplina}\n{aula.turma}"
+    
+    df = pd.DataFrame(grade).T
+    df.index.name = "Dia"
+    
+    HORARIOS_REAIS = {1: "07:00-07:50", 2: "07:50-08:40", 3: "08:40-09:30", 5: "10:00-10:50", 6: "10:50-11:40", 7: "11:40-12:30"}
+    df.index = [HORARIOS_REAIS.get(h, h) for h in df.index]
+    
+    return df
+
+def gerar_todas_semanas_turmas(aulas, turmas):
+    relatorios = {}
+    for turma in turmas:
+        relatorios[turma] = {}
+        for semana in range(1, 6):
+            relatorios[turma][semana] = gerar_grade_por_turma_semana(aulas, turma, semana)
+    return relatorios
+
+def gerar_todas_semanas_salas(aulas, salas):
+    relatorios = {}
+    for sala in salas:
+        relatorios[sala.nome] = {}
+        for semana in range(1, 6):
+            relatorios[sala.nome][semana] = gerar_grade_por_sala_semana(aulas, sala.nome, semana)
+    return relatorios

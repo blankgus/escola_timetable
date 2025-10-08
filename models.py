@@ -2,6 +2,9 @@ from dataclasses import dataclass, field
 from typing import List, Set
 import uuid
 
+# Dias da semana completos (domingo a sábado)
+DIAS_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]
+
 @dataclass
 class Disciplina:
     nome: str
@@ -16,7 +19,7 @@ class Disciplina:
 class Professor:
     nome: str
     disciplinas: List[str]
-    disponibilidade: Set[str]
+    disponibilidade: Set[str]  # Inclui todos os 7 dias
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
@@ -38,12 +41,12 @@ class Aula:
     turma: str
     disciplina: str
     professor: str
-    dia: str
+    dia: str  # "dom", "seg", ..., "sab"
     horario: int
-    sala: str = "Sala 1"  # ← NOVO CAMPO!
+    sala: str = "Sala 1"
 
 @dataclass
 class Feriado:
-    data: str
+     str
     motivo: str
     id: str = field(default_factory=lambda: str(uuid.uuid4()))

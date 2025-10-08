@@ -1,7 +1,7 @@
 from ortools.sat.python import cp_model
 from neuro_rules import eh_horario_ideal
 from collections import defaultdict
-from models import Aula
+from models import Aula, DIAS_SEMANA
 import streamlit as st
 
 class GradeHorariaORTools:
@@ -9,8 +9,8 @@ class GradeHorariaORTools:
         self.turmas = turmas
         self.professores = professores
         self.disciplinas = {d.nome: d for d in disciplinas}
-        self.dias = ["seg", "ter", "qua", "qui", "sex"]
-        self.horarios = [1, 2, 3, 5, 6, 7]
+        self.dias = DIAS_SEMANA  # 7 dias: dom a sab
+        self.horarios = [1, 2, 3, 5, 6, 7]  # Sem recreio (horário 4)
         self.model = cp_model.CpModel()
         self.solver = cp_model.CpSolver()
         self.solver.parameters.max_time_in_seconds = 10.0
@@ -39,9 +39,7 @@ class GradeHorariaORTools:
         for turma_nome, disciplinas in self.disciplinas_por_turma.items():
             for disc_nome in set(disciplinas):
                 for dia in self.dias:
-                    for horario in self.horarios:
-                        if horario == 4:
-                            continue
+                    for horario in self.horarios:  # Já exclui horário 4
                         profs_validos = [
                             p.nome for p in self.professores
                             if disc_nome in p.disciplinas and dia in p.disponibilidade
@@ -107,7 +105,6 @@ class GradeHorariaORTools:
             for (turma, disc, dia, horario), var in self.variaveis.items():
                 if self.solver.BooleanValue(var):
                     profs = self.atribuicoes_prof.get((turma, disc, dia, horario), [])
-                    # ← ATRIBUIR SALA
                     salas = st.session_state.salas if 'salas' in st.session_state else []
                     sala_nome = salas[0].nome if salas else "Sala 1"
                     if profs:

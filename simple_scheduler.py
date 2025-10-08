@@ -1,4 +1,4 @@
-from models import Aula
+from models import Aula, DIAS_SEMANA
 from collections import defaultdict
 import random
 import streamlit as st
@@ -8,8 +8,8 @@ class SimpleGradeHoraria:
         self.turmas = turmas
         self.professores = {p.nome: p for p in professores}
         self.disciplinas = {d.nome: d for d in disciplinas}
-        self.dias = ["seg", "ter", "qua", "qui", "sex"]
-        self.horarios = [1, 2, 3, 5, 6, 7]
+        self.dias = DIAS_SEMANA  # 7 dias
+        self.horarios = [1, 2, 3, 5, 6, 7]  # Sem recreio
         
         self.carga_turma = defaultdict(lambda: defaultdict(int))
         for turma in turmas:
@@ -54,7 +54,6 @@ class SimpleGradeHoraria:
                             break
                     
                     if not conflito:
-                        # ← ATRIBUIR SALA
                         salas = st.session_state.salas if 'salas' in st.session_state else []
                         sala_nome = salas[0].nome if salas else "Sala 1"
                         aula = Aula(turma_nome, disc_nome, prof.nome, dia, horario, sala_nome)

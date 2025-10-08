@@ -1,5 +1,5 @@
 import streamlit as st
-from models import Turma, Professor, Disciplina, Sala
+from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA
 import database
 import uuid
 
