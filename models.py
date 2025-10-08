@@ -1,9 +1,7 @@
-# 📄 models.py
 from dataclasses import dataclass, field
 from typing import List, Set
 import uuid
 
-# Dias da semana completos (domingo a sábado)
 DIAS_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]
 
 @dataclass
