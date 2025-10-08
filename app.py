@@ -6,7 +6,7 @@ import traceback
 from session_state import init_session_state
 from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA
 from scheduler_ortools import GradeHorariaORTools
-from export import exportar_para_excel, exportar_para_pdf, gerar_relatorio_professor, gerar_relatorio_todos_professores, gerar_relatorio_disciplina_sala, gerar_grade_por_turma_semana, gerar_grade_por_sala_semana, gerar_grade_por_professor_semana
+from export import exportar_para_excel, exportar_para_pdf, gerar_relatorio_professor, gerar_relatorio_todos_professores, gerar_relatorio_disciplina_sala, gerar_grade_por_turma_semana, gerar_grade_por_sala_semana, gerar_grade_por_professor_semana, exportar_grade_por_tipo
 import database
 from simple_scheduler import SimpleGradeHoraria
 import uuid
@@ -42,7 +42,6 @@ def color_disciplina(val):
 st.set_page_config(page_title="Escola Timetable", layout="wide")
 st.title("🕒 Gerador Inteligente de Grade Horária")
 
-# Abas principais
 abas = st.tabs(["🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas", "🏫 Salas", "📅 Calendário", "⚙️ Configurações", "🗓️ Feriados"])
 aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8 = abas
 
@@ -325,7 +324,6 @@ with aba1:
         st.warning("⚠️ Cadastre dados antes de gerar grade.")
         st.stop()
     
-    # Menu para escolher tipo de grade
     st.subheader("🎯 Escolha o tipo de grade a gerar")
     tipo_grade = st.radio(
         "Tipo de Grade",
@@ -358,7 +356,6 @@ with aba1:
                     st.error(f"❌ Falha total: {str(e2)}")
                     st.stop()
             
-            # Exibir conforme escolha
             if tipo_grade == "Grade Completa (Turmas)":
                 df = pd.DataFrame([
                     {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala}
@@ -427,6 +424,17 @@ with aba1:
                         st.markdown(f"#### Semana {semana}")
                         df = gerar_grade_por_professor_semana(aulas, prof_selecionado, semana)
                         st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
+            
+            # Botão de exportação por tipo
+            if st.button("📤 Exportar Esta Grade"):
+                output = io.BytesIO()
+                exportar_grade_por_tipo(aulas, tipo_grade, output)
+                st.download_button(
+                    "📥 Baixar Grade",
+                    output.getvalue(),
+                    "grade_exportada.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
 # =================== NOVAS ABAS ===================
 aba9, aba10, aba11 = st.tabs(["🎒 Grade por Turma", "🏫 Grade por Sala", "👨‍🏫 Grade por Professor"])
@@ -434,14 +442,17 @@ aba9, aba10, aba11 = st.tabs(["🎒 Grade por Turma", "🏫 Grade por Sala", "�
 # =================== ABA 9: GRADE POR TURMA ===================
 with aba9:
     st.header("Grade Semanal por Turma")
-    # Código igual ao acima...
+    aulas = []  # ← Você precisa carregar as aulas aqui
+    # [Código igual ao da aba 1]
 
 # =================== ABA 10: GRADE POR SALA ===================
 with aba10:
     st.header("Ocupação Semanal por Sala")
-    # Código igual ao acima...
+    aulas = []  # ← Você precisa carregar as aulas aqui
+    # [Código igual ao da aba 1]
 
 # =================== ABA 11: GRADE POR PROFESSOR ===================
 with aba11:
     st.header("Grade Semanal por Professor")
-    # Código igual ao acima...
+    aulas = []  # ← Você precisa carregar as aulas aqui
+    # [Código igual ao da aba 1]

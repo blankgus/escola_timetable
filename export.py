@@ -144,21 +144,16 @@ def gerar_relatorio_disciplina_sala(aulas):
 
 def gerar_grade_por_turma_semana(aulas, turma_nome, semana=1, cor_feriado="#FF0000"):
     dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]
-    horarios = [1, 2, 3, 4, 5, 6, 7]  # Inclui recreio (4)
+    horarios = [1, 2, 3, 4, 5, 6, 7]
     
     grade = {dia: {h: "" for h in horarios} for dia in dias}
     
-    # Preencher com aulas
     for aula in aulas:
         if aula.turma == turma_nome and aula.dia in dias and aula.horario in horarios:
             grade[aula.dia][aula.horario] = aula.disciplina
     
-    # Marcar recreio
     for dia in dias:
         grade[dia][4] = "RECREIO"
-    
-    # Marcar células vazias
-    for dia in dias:
         for h in horarios:
             if grade[dia][h] == "":
                 grade[dia][h] = "Sem Aula"
@@ -243,22 +238,6 @@ def gerar_grade_por_professor_semana(aulas, professor_nome, semana=1, cor_feriad
     
     return df
 
-def gerar_todas_semanas_turmas(aulas, turmas):
-    relatorios = {}
-    for turma in turmas:
-        relatorios[turma] = {}
-        for semana in range(1, 6):
-            relatorios[turma][semana] = gerar_grade_por_turma_semana(aulas, turma, semana)
-    return relatorios
-
-def gerar_todas_semanas_salas(aulas, salas):
-    relatorios = {}
-    for sala in salas:
-        relatorios[sala.nome] = {}
-        for semana in range(1, 6):
-            relatorios[sala.nome][semana] = gerar_grade_por_sala_semana(aulas, sala.nome, semana)
-    return relatorios
-
 def exportar_grade_por_tipo(aulas, tipo_grade, caminho="grade_exportada.xlsx"):
     """Exporta a grade conforme o tipo escolhido"""
     with pd.ExcelWriter(caminho, engine='openpyxl') as writer:
@@ -275,7 +254,6 @@ def exportar_grade_por_tipo(aulas, tipo_grade, caminho="grade_exportada.xlsx"):
                 fill_value=""
             ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="")
             
-            # Converter horários reais
             HORARIOS_REAIS = {
                 1: "07:00-07:50",
                 2: "07:50-08:40",
