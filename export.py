@@ -59,14 +59,14 @@ def exportar_para_pdf(aulas, caminho="grade_horaria.pdf"):
 
 def gerar_grade_por_turma_semana(aulas, turma_nome, semana=1):
     dias = ["seg", "ter", "qua", "qui", "sex"]  # Só dias úteis
-    horarios = [1, 2, 3, 4, 5, 6, 7]  # Todos os horários
+    horarios = [1, 2, 3, 4, 5, 6, 7]
     grade = {h: {d: "Sem Aula" for d in dias} for h in horarios}
 
     for aula in aulas:
         if aula.turma == turma_nome and aula.dia in dias and aula.horario in horarios:
             grade[aula.horario][aula.dia] = aula.disciplina
 
-    for h in [4]:  # Recreio só nos dias úteis
+    for h in [4]:
         for d in dias:
             grade[h][d] = "RECREIO"
 
@@ -193,7 +193,7 @@ def exportar_grade_por_tipo(aulas, tipo_grade, caminho="grade_exportada.xlsx"):
                     nome_aba = f"Prof_{prof}_Sem{semana}"[:31]
                     df.to_excel(writer, sheet_name=nome_aba)
 
-# Funções de relatório (opcional, mas incluídas para evitar erro)
+# Funções de relatório (para evitar ImportError)
 def gerar_relatorio_professor(professor_nome, aulas):
     return pd.DataFrame([{"Professor": professor_nome, "Total Aulas": len([a for a in aulas if a.professor == professor_nome])}])
 

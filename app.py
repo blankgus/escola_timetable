@@ -4,7 +4,7 @@ import pandas as pd
 import io
 import traceback
 from session_state import init_session_state
-from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA
+from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA, Aula
 from scheduler_ortools import GradeHorariaORTools
 from export import (
     exportar_para_excel,
@@ -54,13 +54,13 @@ def color_disciplina(val):
 st.set_page_config(page_title="Escola Timetable", layout="wide")
 st.title("🕒 Gerador Inteligente de Grade Horária")
 
-# Abas principais + abas de visualização
+# Abas principais + abas de visualização + aba de edição
 abas = st.tabs([
     "🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas",
     "🏫 Salas", "📅 Calendário", "⚙️ Configurações", "🗓️ Feriados",
-    "🎒 Grade por Turma", "🏫 Grade por Sala", "👨‍🏫 Grade por Professor"
+    "✏️ Editar Grade"
 ])
-(aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8, aba9, aba10, aba11) = abas
+(aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8, aba9) = abas
 
 # =================== ABA 2: DISCIPLINAS ===================
 with aba2:
@@ -316,6 +316,8 @@ with aba1:
                 database.salvar_salas(st.session_state.salas)
                 database.salvar_periodos(st.session_state.periodos)
                 database.salvar_feriados(st.session_state.feriados)
+                if "aulas" in st.session_state:
+                    database.salvar_grade(st.session_state.aulas)
                 st.success("✅ Dados salvos!")
             except Exception as e:
                 st.error(f"❌ Erro: {str(e)}")
@@ -328,6 +330,7 @@ with aba1:
                 st.session_state.salas = database.carregar_salas()
                 st.session_state.periodos = database.carregar_periodos() or []
                 st.session_state.feriados = database.carregar_feriados() or []
+                st.session_state.aulas = database.carregar_grade()
                 st.success("✅ Dados carregados!")
                 st.rerun()
             except Exception as e:
@@ -366,6 +369,7 @@ with aba1:
                     st.error(f"❌ Falha total: {str(e2)}")
                     st.stop()
             st.session_state.aulas = aulas
+            database.salvar_grade(aulas)  # Salva automaticamente
             st.session_state.tipo_grade = tipo_grade
             st.session_state.metodo_geracao = metodo
             st.rerun()
@@ -449,53 +453,66 @@ with aba1:
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
-# =================== ABA 9: GRADE POR TURMA ===================
+# =================== ABA 9: EDITAR GRADE ===================
 with aba9:
-    st.header("Grade Semanal por Turma")
-    if st.session_state.aulas:
-        aulas = st.session_state.aulas
-        turmas_lista = sorted(list(set(a.turma for a in aulas)))
-        if turmas_lista:
-            turma_selecionada = st.selectbox("Selecione a turma", turmas_lista, key="turma_semanal")
-            for semana in range(1, 6):
-                st.markdown(f"#### Semana {semana}")
-                df = gerar_grade_por_turma_semana(aulas, turma_selecionada, semana)
-                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        else:
-            st.info("Nenhuma turma encontrada.")
+    st.header("✏️ Editar Grade Manualmente")
+    
+    if st.button("🔄 Carregar Grade Salva"):
+        st.session_state.aulas = database.carregar_grade()
+        st.success("Grade carregada do banco!")
+    
+    if "aulas" not in st.session_state or not st.session_state.aulas:
+        st.info("Gere ou carregue uma grade primeiro.")
     else:
-        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
+        aulas = st.session_state.aulas
+        df_edit = pd.DataFrame([
+            {
+                "ID": a.id,
+                "Turma": a.turma,
+                "Disciplina": a.disciplina,
+                "Professor": a.professor,
+                "Dia": a.dia,
+                "Horário": HORARIOS_REAIS.get(a.horario, str(a.horario)),
+                "Sala": a.sala
+            }
+            for a in aulas
+        ])
+        st.dataframe(df_edit, use_container_width=True)
 
-# =================== ABA 10: GRADE POR SALA ===================
-with aba10:
-    st.header("Ocupação Semanal por Sala")
-    if st.session_state.aulas:
-        aulas = st.session_state.aulas
-        salas_lista = sorted(list(set(a.sala for a in aulas)))
-        if salas_lista:
-            sala_selecionada = st.selectbox("Selecione a sala", salas_lista, key="sala_semanal")
-            for semana in range(1, 6):
-                st.markdown(f"#### Semana {semana}")
-                df = gerar_grade_por_sala_semana(aulas, sala_selecionada, semana)
-                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        else:
-            st.info("Nenhuma sala encontrada.")
-    else:
-        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
+        st.subheader("Modificar uma Aula")
+        aula_selecionada = st.selectbox(
+            "Selecione a aula (Turma - Disciplina - Dia - Horário)",
+            [f"{a.turma} | {a.disciplina} | {a.dia} | {HORARIOS_REAIS.get(a.horario)}" for a in aulas],
+            key="aula_edit"
+        )
+        if aula_selecionada:
+            idx = [f"{a.turma} | {a.disciplina} | {a.dia} | {HORARIOS_REAIS.get(a.horario)}" for a in aulas].index(aula_selecionada)
+            aula = aulas[idx]
 
-# =================== ABA 11: GRADE POR PROFESSOR ===================
-with aba11:
-    st.header("Grade Semanal por Professor")
-    if st.session_state.aulas:
-        aulas = st.session_state.aulas
-        professores_lista = sorted(list(set(a.professor for a in aulas)))
-        if professores_lista:
-            prof_selecionado = st.selectbox("Selecione o professor", professores_lista, key="prof_semanal")
-            for semana in range(1, 6):
-                st.markdown(f"#### Semana {semana}")
-                df = gerar_grade_por_professor_semana(aulas, prof_selecionado, semana)
-                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        else:
-            st.info("Nenhum professor encontrado.")
-    else:
-        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
+            with st.form(f"edit_aula_{aula.id}"):
+                nova_disciplina = st.selectbox("Disciplina", [d.nome for d in st.session_state.disciplinas], 
+                                              index=[d.nome for d in st.session_state.disciplinas].index(aula.disciplina))
+                novos_profs = [p.nome for p in st.session_state.professores if nova_disciplina in p.disciplinas]
+                novo_prof = st.selectbox("Professor", novos_profs, 
+                                        index=novos_profs.index(aula.professor) if aula.professor in novos_profs else 0)
+                nova_sala = st.selectbox("Sala", [s.nome for s in st.session_state.salas], 
+                                        index=[s.nome for s in st.session_state.salas].index(aula.sala))
+                
+                if st.form_submit_button("💾 Salvar Alteração"):
+                    st.session_state.aulas[idx] = Aula(
+                        turma=aula.turma,
+                        disciplina=nova_disciplina,
+                        professor=novo_prof,
+                        dia=aula.dia,
+                        horario=aula.horario,
+                        sala=nova_sala,
+                        id=aula.id
+                    )
+                    database.salvar_grade(st.session_state.aulas)
+                    st.success("✅ Aula atualizada e salva!")
+                    st.rerun()
+
+        st.subheader("💾 Salvar Grade Atual")
+        if st.button("💾 Salvar Grade no Banco"):
+            database.salvar_grade(st.session_state.aulas)
+            st.success("Grade salva permanentemente!")
