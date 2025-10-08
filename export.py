@@ -258,3 +258,62 @@ def gerar_todas_semanas_salas(aulas, salas):
         for semana in range(1, 6):
             relatorios[sala.nome][semana] = gerar_grade_por_sala_semana(aulas, sala.nome, semana)
     return relatorios
+
+def exportar_grade_por_tipo(aulas, tipo_grade, caminho="grade_exportada.xlsx"):
+    """Exporta a grade conforme o tipo escolhido"""
+    with pd.ExcelWriter(caminho, engine='openpyxl') as writer:
+        if tipo_grade == "Grade Completa (Turmas)":
+            df = pd.DataFrame([
+                {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala}
+                for a in aulas
+            ])
+            tabela = df.pivot_table(
+                index=["Turma", "Horário"],
+                columns="Dia",
+                values="Disciplina",
+                aggfunc=lambda x: x.iloc[0],
+                fill_value=""
+            ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="")
+            
+            # Converter horários reais
+            HORARIOS_REAIS = {
+                1: "07:00-07:50",
+                2: "07:50-08:40",
+                3: "08:40-09:30",
+                4: "09:30-10:00",
+                5: "10:00-10:50",
+                6: "10:50-11:40",
+                7: "11:40-12:30"
+            }
+            novo_indice = []
+            for turma, horario_num in tabela.index:
+                horario_real = HORARIOS_REAIS.get(horario_num, f"{horario_num}ª aula")
+                novo_indice.append((turma, horario_real))
+            tabela.index = pd.MultiIndex.from_tuples(novo_indice)
+            
+            tabela.to_excel(writer, sheet_name="Grade por Turma")
+            df.to_excel(writer, sheet_name="Dados Brutos", index=False)
+        
+        elif tipo_grade == "Grade por Turma":
+            turmas_lista = sorted(list(set(a.turma for a in aulas)))
+            for turma in turmas_lista:
+                for semana in range(1, 6):
+                    df = gerar_grade_por_turma_semana(aulas, turma, semana)
+                    nome_aba = f"Turma_{turma}_Sem{semana}"[:31]
+                    df.to_excel(writer, sheet_name=nome_aba)
+        
+        elif tipo_grade == "Grade por Sala":
+            salas_lista = sorted(list(set(a.sala for a in aulas)))
+            for sala in salas_lista:
+                for semana in range(1, 6):
+                    df = gerar_grade_por_sala_semana(aulas, sala, semana)
+                    nome_aba = f"Sala_{sala}_Sem{semana}"[:31]
+                    df.to_excel(writer, sheet_name=nome_aba)
+        
+        elif tipo_grade == "Grade por Professor":
+            professores_lista = sorted(list(set(a.professor for a in aulas)))
+            for prof in professores_lista:
+                for semana in range(1, 6):
+                    df = gerar_grade_por_professor_semana(aulas, prof, semana)
+                    nome_aba = f"Prof_{prof}_Sem{semana}"[:31]
+                    df.to_excel(writer, sheet_name=nome_aba)
