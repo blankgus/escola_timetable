@@ -1,7 +1,9 @@
+# 📄 models.py
 from dataclasses import dataclass, field
 from typing import List, Set
 import uuid
 
+# Dias da semana completos (domingo a sábado)
 DIAS_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]
 
 @dataclass
@@ -46,6 +48,6 @@ class Aula:
 
 @dataclass
 class Feriado:
-     str
+    data: str
     motivo: str
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
