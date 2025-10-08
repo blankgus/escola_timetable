@@ -19,7 +19,7 @@ class Disciplina:
 class Professor:
     nome: str
     disciplinas: List[str]
-    disponibilidade: Set[str]  # Inclui todos os 7 dias
+    disponibilidade: Set[str]
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
@@ -41,12 +41,12 @@ class Aula:
     turma: str
     disciplina: str
     professor: str
-    dia: str  # "dom", "seg", ..., "sab"
+    dia: str
     horario: int
     sala: str = "Sala 1"
 
 @dataclass
 class Feriado:
-     str
+    data: str
     motivo: str
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
