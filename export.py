@@ -60,8 +60,6 @@ def exportar_para_pdf(aulas, caminho="grade_horaria.pdf"):
         pdf.set_font("Arial", size=10)
         aulas_ordenadas = sorted(turmas_aulas[turma], key=lambda x: (x.dia, x.horario))
         for aula in aulas_ordenadas:
-            if aula.horario == 4:
-                continue
             horario_real = HORARIOS_REAIS.get(aula.horario, f"{aula.horario}ª aula")
             linha = f"{aula.dia.upper()} {horario_real}: {aula.disciplina} - Prof. {aula.professor} ({aula.sala})"
             pdf.cell(0, 6, txt=linha, ln=True)
@@ -146,36 +144,101 @@ def gerar_relatorio_disciplina_sala(aulas):
 
 def gerar_grade_por_turma_semana(aulas, turma_nome, semana=1, cor_feriado="#FF0000"):
     dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]
-    horarios = [1, 2, 3, 5, 6, 7]
+    horarios = [1, 2, 3, 4, 5, 6, 7]  # Inclui recreio (4)
     
     grade = {dia: {h: "" for h in horarios} for dia in dias}
     
+    # Preencher com aulas
     for aula in aulas:
-        if aula.turma == turma_nome and aula.horario in horarios and aula.dia in dias:
+        if aula.turma == turma_nome and aula.dia in dias and aula.horario in horarios:
             grade[aula.dia][aula.horario] = aula.disciplina
+    
+    # Marcar recreio
+    for dia in dias:
+        grade[dia][4] = "RECREIO"
+    
+    # Marcar células vazias
+    for dia in dias:
+        for h in horarios:
+            if grade[dia][h] == "":
+                grade[dia][h] = "Sem Aula"
     
     df = pd.DataFrame(grade).T
     df.index.name = "Dia"
     
-    HORARIOS_REAIS = {1: "07:00-07:50", 2: "07:50-08:40", 3: "08:40-09:30", 5: "10:00-10:50", 6: "10:50-11:40", 7: "11:40-12:30"}
+    HORARIOS_REAIS = {
+        1: "07:00-07:50",
+        2: "07:50-08:40",
+        3: "08:40-09:30",
+        4: "09:30-10:00",
+        5: "10:00-10:50",
+        6: "10:50-11:40",
+        7: "11:40-12:30"
+    }
     df.index = [HORARIOS_REAIS.get(h, h) for h in df.index]
     
     return df
 
 def gerar_grade_por_sala_semana(aulas, sala_nome, semana=1, cor_feriado="#FF0000"):
     dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]
-    horarios = [1, 2, 3, 5, 6, 7]
+    horarios = [1, 2, 3, 4, 5, 6, 7]
     
     grade = {dia: {h: "" for h in horarios} for dia in dias}
     
     for aula in aulas:
-        if aula.sala == sala_nome and aula.horario in horarios and aula.dia in dias:
+        if aula.sala == sala_nome and aula.dia in dias and aula.horario in horarios:
             grade[aula.dia][aula.horario] = f"{aula.disciplina}\n{aula.turma}"
+    
+    for dia in dias:
+        grade[dia][4] = "RECREIO"
+        for h in horarios:
+            if grade[dia][h] == "":
+                grade[dia][h] = "Sem Aula"
     
     df = pd.DataFrame(grade).T
     df.index.name = "Dia"
     
-    HORARIOS_REAIS = {1: "07:00-07:50", 2: "07:50-08:40", 3: "08:40-09:30", 5: "10:00-10:50", 6: "10:50-11:40", 7: "11:40-12:30"}
+    HORARIOS_REAIS = {
+        1: "07:00-07:50",
+        2: "07:50-08:40",
+        3: "08:40-09:30",
+        4: "09:30-10:00",
+        5: "10:00-10:50",
+        6: "10:50-11:40",
+        7: "11:40-12:30"
+    }
+    df.index = [HORARIOS_REAIS.get(h, h) for h in df.index]
+    
+    return df
+
+def gerar_grade_por_professor_semana(aulas, professor_nome, semana=1, cor_feriado="#FF0000"):
+    dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]
+    horarios = [1, 2, 3, 4, 5, 6, 7]
+    
+    grade = {dia: {h: "" for h in horarios} for dia in dias}
+    
+    for aula in aulas:
+        if aula.professor == professor_nome and aula.dia in dias and aula.horario in horarios:
+            grade[aula.dia][aula.horario] = f"{aula.disciplina}\n{aula.turma}"
+    
+    for dia in dias:
+        grade[dia][4] = "RECREIO"
+        for h in horarios:
+            if grade[dia][h] == "":
+                grade[dia][h] = "Sem Aula"
+    
+    df = pd.DataFrame(grade).T
+    df.index.name = "Dia"
+    
+    HORARIOS_REAIS = {
+        1: "07:00-07:50",
+        2: "07:50-08:40",
+        3: "08:40-09:30",
+        4: "09:30-10:00",
+        5: "10:00-10:50",
+        6: "10:50-11:40",
+        7: "11:40-12:30"
+    }
     df.index = [HORARIOS_REAIS.get(h, h) for h in df.index]
     
     return df
