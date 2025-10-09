@@ -54,7 +54,7 @@ def color_disciplina(val):
 st.set_page_config(page_title="Escola Timetable", layout="wide")
 st.title("🕒 Gerador Inteligente de Grade Horária")
 
-# Abas principais + abas de visualização + aba de edição
+# Abas principais + aba de edição
 abas = st.tabs([
     "🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas",
     "🏫 Salas", "📅 Calendário", "⚙️ Configurações", "🗓️ Feriados",
@@ -452,6 +452,38 @@ with aba1:
                 "grade_exportada.xlsx",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
+        # =================== VERSÕES DA GRADE ===================
+        st.subheader("📂 Gerenciar Versões")
+        col_v1, col_v2 = st.columns(2)
+        with col_v1:
+            nome_versao = st.text_input("Nome da versão", value="Grade Final - Maio 2025")
+            descricao_versao = st.text_area("Descrição", value="Grade após saída do Prof. X")
+            if st.button("💾 Salvar como Nova Versão"):
+                if "aulas" in st.session_state and st.session_state.aulas:
+                    versao_id = database.salvar_grade_com_versao(
+                        st.session_state.aulas, nome_versao, descricao_versao
+                    )
+                    st.success(f"✅ Versão salva! ID: {versao_id[:8]}")
+                else:
+                    st.warning("⚠️ Gere uma grade primeiro.")
+
+        with col_v2:
+            versoes = database.listar_versoes()
+            if versoes:
+                versao_selecionada = st.selectbox(
+                    "Carregar versão anterior",
+                    [f"{v['nome']} ({v['data'][:10]})" for v in versoes],
+                    key="versao_load"
+                )
+                if st.button("🔄 Carregar Versão"):
+                    idx = [f"{v['nome']} ({v['data'][:10]})" for v in versoes].index(versao_selecionada)
+                    versao_id = versoes[idx]["id"]
+                    st.session_state.aulas = database.carregar_grade_por_versao(versao_id)
+                    st.success(f"✅ Versão '{versoes[idx]['nome']}' carregada!")
+                    st.rerun()
+            else:
+                st.info("Nenhuma versão salva ainda.")
 
 # =================== ABA 9: EDITAR GRADE ===================
 with aba9:

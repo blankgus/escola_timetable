@@ -43,7 +43,7 @@ class Aula:
     dia: str
     horario: int
     sala: str = "Sala 1"
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))  # ← ID para edição
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
 class Feriado:
