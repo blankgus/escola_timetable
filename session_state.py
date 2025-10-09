@@ -5,32 +5,46 @@ import uuid
 
 def init_session_state():
     database.init_db()
-    
     if "turmas" not in st.session_state:
         st.session_state.turmas = database.carregar_turmas() or [
             Turma("6anoA", "6ano", "manha"),
+            Turma("6anoB", "6ano", "manha"),
             Turma("7anoA", "7ano", "manha"),
+            Turma("7anoB", "7ano", "manha"),
             Turma("8anoA", "8ano", "manha"),
+            Turma("8anoB", "8ano", "manha"),
             Turma("9anoA", "9ano", "manha"),
+            Turma("9anoB", "9ano", "manha"),
             Turma("1emA", "1em", "manha"),
+            Turma("1emB", "1em", "manha"),
             Turma("2emA", "2em", "manha"),
+            Turma("2emB", "2em", "manha"),
             Turma("3emA", "3em", "manha"),
+            Turma("3emB", "3em", "manha"),
         ]
-    
     if "professores" not in st.session_state:
         st.session_state.professores = database.carregar_professores() or [
-            Professor("Ana", ["Matemática"], {"seg", "ter", "qua", "qui", "sex"}),
-            Professor("Bruno", ["Português"], {"seg", "ter", "qua", "qui", "sex"}),
-            Professor("Carla", ["História", "Geografia"], {"seg", "ter", "qua", "qui", "sex"}),
-            Professor("Diego", ["Ciências", "Biologia"], {"seg", "ter", "qua", "qui", "sex"}),
-            Professor("Eliane", ["Inglês"], {"seg", "ter", "qua", "qui", "sex"}),
-            Professor("Fábio", ["Educação Física"], {"seg", "ter", "qua", "qui", "sex"}),
-            Professor("Gisele", ["Artes"], {"seg", "ter", "qua", "qui", "sex"}),
-            Professor("Hugo", ["Física", "Matemática"], {"seg", "ter", "qua", "qui", "sex"}),
-            Professor("Isabel", ["Química"], {"seg", "ter", "qua", "qui", "sex"}),
-            Professor("Jorge", ["Filosofia", "Sociologia"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Ana A", ["Matemática"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Ana B", ["Matemática"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Bruno A", ["Português"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Bruno B", ["Português"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Carla A", ["História", "Geografia"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Carla B", ["História", "Geografia"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Diego A", ["Ciências", "Biologia"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Diego B", ["Ciências", "Biologia"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Eliane A", ["Inglês"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Eliane B", ["Inglês"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Fábio A", ["Educação Física"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Fábio B", ["Educação Física"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Gisele A", ["Artes"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Gisele B", ["Artes"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Hugo A", ["Física", "Matemática"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Hugo B", ["Física", "Matemática"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Isabel A", ["Química"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Isabel B", ["Química"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Jorge A", ["Filosofia", "Sociologia"], {"seg", "ter", "qua", "qui", "sex"}),
+            Professor("Jorge B", ["Filosofia", "Sociologia"], {"seg", "ter", "qua", "qui", "sex"}),
         ]
-    
     if "disciplinas" not in st.session_state:
         st.session_state.disciplinas = database.carregar_disciplinas() or [
             Disciplina("Matemática", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "#4A90E2", "#FFFFFF"),
@@ -47,39 +61,20 @@ def init_session_state():
             Disciplina("Filosofia", 2, "leve", ["1em", "2em", "3em"], "#9B59B6", "#FFFFFF"),
             Disciplina("Sociologia", 2, "leve", ["2em", "3em"], "#16A085", "#FFFFFF"),
         ]
-    
     if "salas" not in st.session_state:
         st.session_state.salas = database.carregar_salas() or [
             Sala("Sala 1", 30, "normal"),
             Sala("Sala 2", 30, "normal"),
+            Sala("Sala 3", 30, "normal"),
+            Sala("Sala 4", 30, "normal"),
+            Sala("Sala 5", 30, "normal"),
+            Sala("Sala 6", 30, "normal"),
+            Sala("Sala 7", 30, "normal"),
+            Sala("Sala 8", 30, "normal"),
+            Sala("Sala 9", 30, "normal"),
+            Sala("Sala 10", 30, "normal"),
+            Sala("Sala 11", 30, "normal"),
+            Sala("Sala 12", 30, "normal"),
             Sala("Laboratório de Ciências", 25, "laboratório"),
             Sala("Auditório", 100, "auditório"),
         ]
-    
-    if "periodos" not in st.session_state:
-        periodos_db = database.carregar_periodos()
-        if periodos_db:
-            st.session_state.periodos = periodos_db
-        else:
-            st.session_state.periodos = [
-                {"nome": "1º Bimestre", "inicio": "2025-02-01", "fim": "2025-03-31", "id": str(uuid.uuid4())},
-                {"nome": "2º Bimestre", "inicio": "2025-04-01", "fim": "2025-05-31", "id": str(uuid.uuid4())},
-                {"nome": "3º Bimestre", "inicio": "2025-06-01", "fim": "2025-07-31", "id": str(uuid.uuid4())},
-                {"nome": "4º Bimestre", "inicio": "2025-08-01", "fim": "2025-09-30", "id": str(uuid.uuid4())},
-            ]
-    
-    if "feriados" not in st.session_state:
-        feriados_db = database.carregar_feriados()
-        if feriados_db:
-            st.session_state.feriados = feriados_db
-        else:
-            st.session_state.feriados = [
-                {"data": "2025-01-01", "motivo": "Ano Novo", "id": str(uuid.uuid4())},
-                {"data": "2025-04-21", "motivo": "Tiradentes", "id": str(uuid.uuid4())},
-                {"data": "2025-05-01", "motivo": "Dia do Trabalho", "id": str(uuid.uuid4())},
-                {"data": "2025-09-07", "motivo": "Independência", "id": str(uuid.uuid4())},
-                {"data": "2025-10-12", "motivo": "Nossa Sra. Aparecida", "id": str(uuid.uuid4())},
-                {"data": "2025-11-02", "motivo": "Finados", "id": str(uuid.uuid4())},
-                {"data": "2025-11-15", "motivo": "Proclamação da República", "id": str(uuid.uuid4())},
-                {"data": "2025-12-25", "motivo": "Natal", "id": str(uuid.uuid4())},
-            ]

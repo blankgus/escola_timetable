@@ -61,15 +61,12 @@ def gerar_grade_por_turma_semana(aulas, turma_nome, semana=1):
     dias = ["seg", "ter", "qua", "qui", "sex"]  # Só dias úteis
     horarios = [1, 2, 3, 4, 5, 6, 7]
     grade = {h: {d: "Sem Aula" for d in dias} for h in horarios}
-
     for aula in aulas:
         if aula.turma == turma_nome and aula.dia in dias and aula.horario in horarios:
             grade[aula.horario][aula.dia] = aula.disciplina
-
     for h in [4]:
         for d in dias:
             grade[h][d] = "RECREIO"
-
     df = pd.DataFrame(grade).T
     df.index.name = "Horário"
     HORARIOS_REAIS = {
@@ -88,15 +85,12 @@ def gerar_grade_por_sala_semana(aulas, sala_nome, semana=1):
     dias = ["seg", "ter", "qua", "qui", "sex"]
     horarios = [1, 2, 3, 4, 5, 6, 7]
     grade = {h: {d: "Sem Aula" for d in dias} for h in horarios}
-
     for aula in aulas:
         if aula.sala == sala_nome and aula.dia in dias and aula.horario in horarios:
             grade[aula.horario][aula.dia] = aula.disciplina
-
     for h in [4]:
         for d in dias:
             grade[h][d] = "RECREIO"
-
     df = pd.DataFrame(grade).T
     df.index.name = "Horário"
     HORARIOS_REAIS = {
@@ -115,15 +109,12 @@ def gerar_grade_por_professor_semana(aulas, professor_nome, semana=1):
     dias = ["seg", "ter", "qua", "qui", "sex"]
     horarios = [1, 2, 3, 4, 5, 6, 7]
     grade = {h: {d: "Sem Aula" for d in dias} for h in horarios}
-
     for aula in aulas:
         if aula.professor == professor_nome and aula.dia in dias and aula.horario in horarios:
             grade[aula.horario][aula.dia] = f"{aula.disciplina}\n{aula.turma}"
-
     for h in [4]:
         for d in dias:
             grade[h][d] = "RECREIO"
-
     df = pd.DataFrame(grade).T
     df.index.name = "Horário"
     HORARIOS_REAIS = {
@@ -168,7 +159,6 @@ def exportar_grade_por_tipo(aulas, tipo_grade, caminho="grade_exportada.xlsx"):
             tabela.index = pd.MultiIndex.from_tuples(novo_indice)
             tabela.to_excel(writer, sheet_name="Grade por Turma")
             df.to_excel(writer, sheet_name="Dados Brutos", index=False)
-
         elif tipo_grade == "Grade por Turma":
             turmas_lista = sorted(list(set(a.turma for a in aulas)))
             for turma in turmas_lista:
@@ -176,7 +166,6 @@ def exportar_grade_por_tipo(aulas, tipo_grade, caminho="grade_exportada.xlsx"):
                     df = gerar_grade_por_turma_semana(aulas, turma, semana)
                     nome_aba = f"Turma_{turma}_Sem{semana}"[:31]
                     df.to_excel(writer, sheet_name=nome_aba)
-
         elif tipo_grade == "Grade por Sala":
             salas_lista = sorted(list(set(a.sala for a in aulas)))
             for sala in salas_lista:
@@ -184,7 +173,6 @@ def exportar_grade_por_tipo(aulas, tipo_grade, caminho="grade_exportada.xlsx"):
                     df = gerar_grade_por_sala_semana(aulas, sala, semana)
                     nome_aba = f"Sala_{sala}_Sem{semana}"[:31]
                     df.to_excel(writer, sheet_name=nome_aba)
-
         elif tipo_grade == "Grade por Professor":
             professores_lista = sorted(list(set(a.professor for a in aulas)))
             for prof in professores_lista:
@@ -193,7 +181,6 @@ def exportar_grade_por_tipo(aulas, tipo_grade, caminho="grade_exportada.xlsx"):
                     nome_aba = f"Prof_{prof}_Sem{semana}"[:31]
                     df.to_excel(writer, sheet_name=nome_aba)
 
-# Funções de relatório (para evitar ImportError)
 def gerar_relatorio_professor(professor_nome, aulas):
     return pd.DataFrame([{"Professor": professor_nome, "Total Aulas": len([a for a in aulas if a.professor == professor_nome])}])
 

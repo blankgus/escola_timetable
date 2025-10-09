@@ -167,7 +167,6 @@ def carregar_feriados():
     conn.close()
     return [{"data": r[1], "motivo": r[2], "id": r[0]} for r in rows]
 
-# ✅ FUNÇÕES FALTANTES — ADICIONADAS
 def salvar_grade(aulas):
     conn = sqlite3.connect('escola.db')
     c = conn.cursor()
