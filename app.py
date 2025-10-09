@@ -33,6 +33,8 @@ HORARIOS_REAIS = {
 
 try:
     init_session_state()
+    if "aulas" not in st.session_state:
+        st.session_state.aulas = []
 except Exception as e:
     st.error(f"❌ Erro na inicialização: {str(e)}")
     st.code(traceback.format_exc())
@@ -52,8 +54,13 @@ def color_disciplina(val):
 st.set_page_config(page_title="Escola Timetable", layout="wide")
 st.title("🕒 Gerador Inteligente de Grade Horária")
 
-abas = st.tabs(["🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas", "🏫 Salas", "📅 Calendário", "⚙️ Configurações", "🗓️ Feriados"])
-aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8 = abas
+# Abas principais + abas de visualização
+abas = st.tabs([
+    "🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas",
+    "🏫 Salas", "📅 Calendário", "⚙️ Configurações", "🗓️ Feriados",
+    "🎒 Grade por Turma", "🏫 Grade por Sala", "👨‍🏫 Grade por Professor"
+])
+(aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8, aba9, aba10, aba11) = abas
 
 # =================== ABA 2: DISCIPLINAS ===================
 with aba2:
@@ -257,7 +264,7 @@ with aba8:
                     st.rerun()
                 if col2.form_submit_button("🗑️ Excluir"):
                     st.session_state.feriados = [
-                        item for item in st.session_state.feriados if item["id"] != f["id"]
+                        item for item in st.session_state.feriados if item.id != f.id
                     ]
                     st.rerun()
 
@@ -367,6 +374,7 @@ with aba1:
             st.session_state.metodo_geracao = metodo
             st.rerun()
     
+    # Exibir grade se já gerada
     if st.session_state.aulas:
         aulas = st.session_state.aulas
         tipo_grade = st.session_state.tipo_grade
@@ -445,9 +453,6 @@ with aba1:
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
-# =================== NOVAS ABAS ===================
-aba9, aba10, aba11 = st.tabs(["🎒 Grade por Turma", "🏫 Grade por Sala", "👨‍🏫 Grade por Professor"])
-
 # =================== ABA 9: GRADE POR TURMA ===================
 with aba9:
     st.header("Grade Semanal por Turma")
@@ -484,4 +489,17 @@ with aba10:
 
 # =================== ABA 11: GRADE POR PROFESSOR ===================
 with aba11:
-   
+    st.header("Grade Semanal por Professor")
+    if st.session_state.aulas:
+        aulas = st.session_state.aulas
+        professores_lista = sorted(list(set(a.professor for a in aulas)))
+        if professores_lista:
+            prof_selecionado = st.selectbox("Selecione o professor", professores_lista, key="prof_semanal")
+            for semana in range(1, 6):
+                st.markdown(f"#### Semana {semana}")
+                df = gerar_grade_por_professor_semana(aulas, prof_selecionado, semana)
+                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
+        else:
+            st.info("Nenhum professor encontrado.")
+    else:
+        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
