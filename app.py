@@ -50,6 +50,7 @@ def color_disciplina(val):
     if val == "Sem Aula":
         return 'background-color: #F0F0F0; color: #666666; font-style: italic; text-align: center'
     return ''
+
 st.set_page_config(page_title="Escola Timetable", layout="wide")
 st.title("🕒 Gerador Inteligente de Grade Horária")
 
@@ -363,7 +364,7 @@ with aba1:
                     st.error(f"❌ Falha total: {str(e2)}")
                     st.stop()
             st.session_state.aulas = aulas
-            database.salvar_grade(aulas)  # ✅ AGORA EXISTE!
+            database.salvar_grade(aulas)
             st.success(f"✅ Grade gerada com {metodo}!")
 
             if tipo_grade == "Grade Completa (Turmas)":
