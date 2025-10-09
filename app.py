@@ -54,13 +54,8 @@ def color_disciplina(val):
 st.set_page_config(page_title="Escola Timetable", layout="wide")
 st.title("🕒 Gerador Inteligente de Grade Horária")
 
-# Abas principais + abas de visualização
-abas = st.tabs([
-    "🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas",
-    "🏫 Salas", "📅 Calendário", "⚙️ Configurações", "🗓️ Feriados",
-    "🎒 Grade por Turma", "🏫 Grade por Sala", "👨‍🏫 Grade por Professor"
-])
-(aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8, aba9, aba10, aba11) = abas
+abas = st.tabs(["🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas", "🏫 Salas", "📅 Calendário", "⚙️ Configurações", "🗓️ Feriados"])
+aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8 = abas
 
 # =================== ABA 2: DISCIPLINAS ===================
 with aba2:
@@ -264,7 +259,7 @@ with aba8:
                     st.rerun()
                 if col2.form_submit_button("🗑️ Excluir"):
                     st.session_state.feriados = [
-                        item for item in st.session_state.feriados if item.id != f.id
+                        item for item in st.session_state.feriados if item["id"] != f["id"]
                     ]
                     st.rerun()
 
@@ -356,7 +351,7 @@ with aba1:
                 aulas = grade.resolver()
                 metodo = "Google OR-Tools"
             except Exception as e1:
-                st.warning(f"⚠️ OR-Tools falhou. Tentando método simples...")
+                st.warning("⚠️ OR-Tools falhou. Tentando método simples...")
                 try:
                     simple_grade = SimpleGradeHoraria(
                         st.session_state.turmas,
@@ -369,137 +364,79 @@ with aba1:
                     st.error(f"❌ Falha total: {str(e2)}")
                     st.stop()
             st.session_state.aulas = aulas
-            database.salvar_grade(aulas)
-            st.session_state.tipo_grade = tipo_grade
-            st.session_state.metodo_geracao = metodo
-            st.rerun()
-    
-    # Exibir grade se já gerada
-    if st.session_state.aulas:
-        aulas = st.session_state.aulas
-        tipo_grade = st.session_state.tipo_grade
-        metodo = st.session_state.metodo_geracao
-        st.success(f"✅ Grade gerada com {metodo}!")
-        
-        if tipo_grade == "Grade Completa (Turmas)":
-            df = pd.DataFrame([
-                {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala}
-                for a in aulas
-            ])
-            tabela = df.pivot_table(
-                index=["Turma", "Horário"],
-                columns="Dia",
-                values="Disciplina",
-                aggfunc=lambda x: x.iloc[0],
-                fill_value=""
-            ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="")
-            novo_indice = []
-            for turma, horario_num in tabela.index:
-                horario_real = HORARIOS_REAIS.get(horario_num, f"{horario_num}ª aula")
-                novo_indice.append((turma, horario_real))
-            tabela.index = pd.MultiIndex.from_tuples(novo_indice)
-            st.dataframe(tabela.style.applymap(color_disciplina), use_container_width=True)
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                tabela.to_excel(writer, sheet_name="Grade")
-                df.to_excel(writer, sheet_name="Dados", index=False)
-            st.download_button("📥 Excel", output.getvalue(), "grade.xlsx")
-            pdf_path = "grade_horaria.pdf"
-            exportar_para_pdf(aulas, pdf_path)
-            with open(pdf_path, "rb") as f:
-                st.download_button("📄 PDF", f.read(), "grade.pdf")
-            st.subheader("📊 Relatórios")
-            prof_horas = pd.DataFrame([
-                {"Professor": p, "Horas": c} 
-                for p, c in pd.Series([a.professor for a in aulas]).value_counts().items()
-            ])
-            st.dataframe(prof_horas, use_container_width=True)
-        elif tipo_grade == "Grade por Turma":
-            st.markdown("### 🎒 Grade por Turma")
-            turmas_lista = sorted(list(set(a.turma for a in aulas)))
-            if turmas_lista:
-                turma_selecionada = st.selectbox("Selecione a turma", turmas_lista, key="turma_escolhida")
-                for semana in range(1, 6):
-                    st.markdown(f"#### Semana {semana}")
-                    df = gerar_grade_por_turma_semana(aulas, turma_selecionada, semana)
-                    st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        elif tipo_grade == "Grade por Sala":
-            st.markdown("### 🏫 Grade por Sala")
-            salas_lista = sorted(list(set(a.sala for a in aulas)))
-            if salas_lista:
-                sala_selecionada = st.selectbox("Selecione a sala", salas_lista, key="sala_escolhida")
-                for semana in range(1, 6):
-                    st.markdown(f"#### Semana {semana}")
-                    df = gerar_grade_por_sala_semana(aulas, sala_selecionada, semana)
-                    st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        elif tipo_grade == "Grade por Professor":
-            st.markdown("### 👨‍🏫 Grade por Professor")
-            professores_lista = sorted(list(set(a.professor for a in aulas)))
-            if professores_lista:
-                prof_selecionado = st.selectbox("Selecione o professor", professores_lista, key="prof_escolhido")
-                for semana in range(1, 6):
-                    st.markdown(f"#### Semana {semana}")
-                    df = gerar_grade_por_professor_semana(aulas, prof_selecionado, semana)
-                    st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        
-        # Botão de exportação por tipo
-        if st.button("📤 Exportar Esta Grade"):
-            output = io.BytesIO()
-            exportar_grade_por_tipo(aulas, tipo_grade, output)
-            st.download_button(
-                "📥 Baixar Grade",
-                output.getvalue(),
-                "grade_exportada.xlsx",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            database.salvar_grade(aulas)  # ✅ AGORA EXISTE!
+            st.success(f"✅ Grade gerada com {metodo}!")
 
-# =================== ABA 9: GRADE POR TURMA ===================
-with aba9:
-    st.header("Grade Semanal por Turma")
-    if st.session_state.aulas:
-        aulas = st.session_state.aulas
-        turmas_lista = sorted(list(set(a.turma for a in aulas)))
-        if turmas_lista:
-            turma_selecionada = st.selectbox("Selecione a turma", turmas_lista, key="turma_semanal")
-            for semana in range(1, 6):
-                st.markdown(f"#### Semana {semana}")
-                df = gerar_grade_por_turma_semana(aulas, turma_selecionada, semana)
-                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        else:
-            st.info("Nenhuma turma encontrada.")
-    else:
-        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
+            if tipo_grade == "Grade Completa (Turmas)":
+                df = pd.DataFrame([
+                    {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala}
+                    for a in aulas
+                ])
+                tabela = df.pivot_table(
+                    index=["Turma", "Horário"],
+                    columns="Dia",
+                    values="Disciplina",
+                    aggfunc=lambda x: x.iloc[0],
+                    fill_value=""
+                ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="")
+                novo_indice = []
+                for turma, horario_num in tabela.index:
+                    horario_real = HORARIOS_REAIS.get(horario_num, f"{horario_num}ª aula")
+                    novo_indice.append((turma, horario_real))
+                tabela.index = pd.MultiIndex.from_tuples(novo_indice)
+                st.dataframe(tabela.style.applymap(color_disciplina), use_container_width=True)
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    tabela.to_excel(writer, sheet_name="Grade")
+                    df.to_excel(writer, sheet_name="Dados", index=False)
+                st.download_button("📥 Excel", output.getvalue(), "grade.xlsx")
+                pdf_path = "grade_horaria.pdf"
+                exportar_para_pdf(aulas, pdf_path)
+                with open(pdf_path, "rb") as f:
+                    st.download_button("📄 PDF", f.read(), "grade.pdf")
+                st.subheader("📊 Relatórios")
+                prof_horas = pd.DataFrame([
+                    {"Professor": p, "Horas": c} 
+                    for p, c in pd.Series([a.professor for a in aulas]).value_counts().items()
+                ])
+                st.dataframe(prof_horas, use_container_width=True)
 
-# =================== ABA 10: GRADE POR SALA ===================
-with aba10:
-    st.header("Ocupação Semanal por Sala")
-    if st.session_state.aulas:
-        aulas = st.session_state.aulas
-        salas_lista = sorted(list(set(a.sala for a in aulas)))
-        if salas_lista:
-            sala_selecionada = st.selectbox("Selecione a sala", salas_lista, key="sala_semanal")
-            for semana in range(1, 6):
-                st.markdown(f"#### Semana {semana}")
-                df = gerar_grade_por_sala_semana(aulas, sala_selecionada, semana)
-                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        else:
-            st.info("Nenhuma sala encontrada.")
-    else:
-        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
+            elif tipo_grade == "Grade por Turma":
+                st.markdown("### 🎒 Grade por Turma")
+                turmas_lista = sorted(list(set(a.turma for a in aulas)))
+                if turmas_lista:
+                    turma_selecionada = st.selectbox("Selecione a turma", turmas_lista, key="turma_escolhida")
+                    for semana in range(1, 6):
+                        st.markdown(f"#### Semana {semana}")
+                        df = gerar_grade_por_turma_semana(aulas, turma_selecionada, semana)
+                        st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
 
-# =================== ABA 11: GRADE POR PROFESSOR ===================
-with aba11:
-    st.header("Grade Semanal por Professor")
-    if st.session_state.aulas:
-        aulas = st.session_state.aulas
-        professores_lista = sorted(list(set(a.professor for a in aulas)))
-        if professores_lista:
-            prof_selecionado = st.selectbox("Selecione o professor", professores_lista, key="prof_semanal")
-            for semana in range(1, 6):
-                st.markdown(f"#### Semana {semana}")
-                df = gerar_grade_por_professor_semana(aulas, prof_selecionado, semana)
-                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        else:
-            st.info("Nenhum professor encontrado.")
-    else:
-        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
+            elif tipo_grade == "Grade por Sala":
+                st.markdown("### 🏫 Grade por Sala")
+                salas_lista = sorted(list(set(a.sala for a in aulas)))
+                if salas_lista:
+                    sala_selecionada = st.selectbox("Selecione a sala", salas_lista, key="sala_escolhida")
+                    for semana in range(1, 6):
+                        st.markdown(f"#### Semana {semana}")
+                        df = gerar_grade_por_sala_semana(aulas, sala_selecionada, semana)
+                        st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
+
+            elif tipo_grade == "Grade por Professor":
+                st.markdown("### 👨‍🏫 Grade por Professor")
+                professores_lista = sorted(list(set(a.professor for a in aulas)))
+                if professores_lista:
+                    prof_selecionado = st.selectbox("Selecione o professor", professores_lista, key="prof_escolhido")
+                    for semana in range(1, 6):
+                        st.markdown(f"#### Semana {semana}")
+                        df = gerar_grade_por_professor_semana(aulas, prof_selecionado, semana)
+                        st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
+
+            if st.button("📤 Exportar Esta Grade"):
+                output = io.BytesIO()
+                exportar_grade_por_tipo(aulas, tipo_grade, output)
+                st.download_button(
+                    "📥 Baixar Grade",
+                    output.getvalue(),
+                    "grade_exportada.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
