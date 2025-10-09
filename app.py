@@ -6,17 +6,7 @@ import traceback
 from session_state import init_session_state
 from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA
 from scheduler_ortools import GradeHorariaORTools
-from export import (
-    exportar_para_excel,
-    exportar_para_pdf,
-    gerar_relatorio_professor,
-    gerar_relatorio_todos_professores,
-    gerar_relatorio_disciplina_sala,
-    gerar_grade_por_turma_semana,
-    gerar_grade_por_sala_semana,
-    gerar_grade_por_professor_semana,
-    exportar_grade_por_tipo
-)
+from export import exportar_para_excel, exportar_para_pdf, gerar_relatorio_professor, gerar_relatorio_todos_professores, gerar_relatorio_disciplina_sala, gerar_grade_por_turma_semana, gerar_grade_por_sala_semana, gerar_grade_por_professor_semana, exportar_grade_por_tipo
 import database
 from simple_scheduler import SimpleGradeHoraria
 import uuid
@@ -54,8 +44,8 @@ def color_disciplina(val):
 st.set_page_config(page_title="Escola Timetable", layout="wide")
 st.title("🕒 Gerador Inteligente de Grade Horária")
 
-abas = st.tabs(["🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas", "🏫 Salas", "📅 Calendário", "⚙️ Configurações", "🗓️ Feriados"])
-aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8 = abas
+abas = st.tabs(["🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas", "🏫 Salas", "📅 Calendário", "⚙️ Configurações", "🗓️ Feriados", "🎒 Grade por Turma", "🏫 Grade por Sala", "👨‍🏫 Grade por Professor"])
+aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8, aba9, aba10, aba11 = abas
 
 # =================== ABA 2: DISCIPLINAS ===================
 with aba2:
@@ -441,3 +431,54 @@ with aba1:
                     "grade_exportada.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
+
+# =================== ABA 9: GRADE POR TURMA ===================
+with aba9:
+    st.header("Grade Semanal por Turma")
+    if st.session_state.aulas:
+        aulas = st.session_state.aulas
+        turmas_lista = sorted(list(set(a.turma for a in aulas)))
+        if turmas_lista:
+            turma_selecionada = st.selectbox("Selecione a turma", turmas_lista, key="turma_semanal")
+            for semana in range(1, 6):
+                st.markdown(f"#### Semana {semana}")
+                df = gerar_grade_por_turma_semana(aulas, turma_selecionada, semana)
+                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
+        else:
+            st.info("Nenhuma turma encontrada.")
+    else:
+        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
+
+# =================== ABA 10: GRADE POR SALA ===================
+with aba10:
+    st.header("Ocupação Semanal por Sala")
+    if st.session_state.aulas:
+        aulas = st.session_state.aulas
+        salas_lista = sorted(list(set(a.sala for a in aulas)))
+        if salas_lista:
+            sala_selecionada = st.selectbox("Selecione a sala", salas_lista, key="sala_semanal")
+            for semana in range(1, 6):
+                st.markdown(f"#### Semana {semana}")
+                df = gerar_grade_por_sala_semana(aulas, sala_selecionada, semana)
+                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
+        else:
+            st.info("Nenhuma sala encontrada.")
+    else:
+        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
+
+# =================== ABA 11: GRADE POR PROFESSOR ===================
+with aba11:
+    st.header("Grade Semanal por Professor")
+    if st.session_state.aulas:
+        aulas = st.session_state.aulas
+        professores_lista = sorted(list(set(a.professor for a in aulas)))
+        if professores_lista:
+            prof_selecionado = st.selectbox("Selecione o professor", professores_lista, key="prof_semanal")
+            for semana in range(1, 6):
+                st.markdown(f"#### Semana {semana}")
+                df = gerar_grade_por_professor_semana(aulas, prof_selecionado, semana)
+                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
+        else:
+            st.info("Nenhum professor encontrado.")
+    else:
+        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
