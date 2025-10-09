@@ -50,7 +50,6 @@ def color_disciplina(val):
     if val == "Sem Aula":
         return 'background-color: #F0F0F0; color: #666666; font-style: italic; text-align: center'
     return ''
-
 st.set_page_config(page_title="Escola Timetable", layout="wide")
 st.title("🕒 Gerador Inteligente de Grade Horária")
 
