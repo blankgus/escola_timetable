@@ -193,7 +193,7 @@ def exportar_grade_por_tipo(aulas, tipo_grade, caminho="grade_exportada.xlsx"):
                     nome_aba = f"Prof_{prof}_Sem{semana}"[:31]
                     df.to_excel(writer, sheet_name=nome_aba)
 
-# Funções de relatório (opcional, mas incluídas para evitar ImportError)
+# Funções de relatório (para evitar ImportError)
 def gerar_relatorio_professor(professor_nome, aulas):
     return pd.DataFrame([{"Professor": professor_nome, "Total Aulas": len([a for a in aulas if a.professor == professor_nome])}])
 
