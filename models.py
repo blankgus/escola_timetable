@@ -18,9 +18,7 @@ class Disciplina:
 class Professor:
     nome: str
     disciplinas: List[str]
-    disponibilidade_dias: Set[str]
-    disponibilidade_horarios: Set[int]
-    restricoes: Set[str] = field(default_factory=set)
+    disponibilidade: Set[str]
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
