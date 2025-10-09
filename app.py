@@ -361,7 +361,8 @@ with aba1:
                     aulas = simple_grade.gerar_grade()
                     metodo = "Algoritmo Simples"
                 except Exception as e2:
-                    st.error(f"❌ Falha total: {str(e2)}")
+                    st.error("❌ Falha total ao gerar grade.")
+                    st.code(traceback.format_exc())
                     st.stop()
             st.session_state.aulas = aulas
             database.salvar_grade(aulas)
