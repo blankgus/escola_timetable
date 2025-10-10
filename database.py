@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import uuid
+import pandas as pd
 
 def init_db():
     conn = sqlite3.connect("escola.db")
@@ -10,10 +11,7 @@ def init_db():
             id TEXT PRIMARY KEY,
             nome TEXT,
             serie TEXT,
-            turno TEXT,
-            tipo TEXT,
-            disciplinas_turma TEXT,
-            regras_neuro TEXT
+            turno TEXT
         )
     """)
     cursor.execute("""
@@ -21,10 +19,7 @@ def init_db():
             id TEXT PRIMARY KEY,
             nome TEXT,
             disciplinas TEXT,
-            dias_indisponiveis TEXT,
-            horarios_indisponiveis TEXT,
-            turmas_permitidas TEXT,
-            restricoes TEXT
+            disponibilidade TEXT
         )
     """)
     cursor.execute("""
@@ -57,21 +52,6 @@ def init_db():
             sala TEXT
         )
     """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS periodos (
-            id TEXT PRIMARY KEY,
-            nome TEXT,
-            inicio TEXT,
-            fim TEXT
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS feriados (
-            id TEXT PRIMARY KEY,
-            data TEXT,
-            motivo TEXT
-        )
-    """)
     conn.commit()
     conn.close()
 
@@ -81,8 +61,8 @@ def salvar_turmas(turmas):
     cursor.execute("DELETE FROM turmas")
     for t in turmas:
         cursor.execute(
-            "INSERT INTO turmas (id, nome, serie, turno, tipo, disciplinas_turma, regras_neuro) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (t.id, t.nome, t.serie, t.turno, t.tipo, json.dumps([dt.__dict__ for dt in t.disciplinas_turma]), json.dumps(t.regras_neuro))
+            "INSERT INTO turmas (id, nome, serie, turno) VALUES (?, ?, ?, ?)",
+            (t.id, t.nome, t.serie, t.turno)
         )
     conn.commit()
     conn.close()
@@ -92,19 +72,8 @@ def carregar_turmas():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM turmas")
     rows = cursor.fetchall()
-    from models import Turma, DisciplinaTurma
-    turmas = []
-    for row in rows:
-        dt_list = [DisciplinaTurma(**dt) for dt in json.loads(row[5])]
-        turmas.append(Turma(
-            nome=row[1],
-            serie=row[2],
-            turno=row[3],
-            tipo=row[4],
-            disciplinas_turma=dt_list,
-            regras_neuro=json.loads(row[6]),
-            id=row[0]
-        ))
+    from models import Turma
+    turmas = [Turma(nome=row[1], serie=row[2], turno=row[3], id=row[0]) for row in rows]
     conn.close()
     return turmas
 
@@ -114,8 +83,8 @@ def salvar_professores(professores):
     cursor.execute("DELETE FROM professores")
     for p in professores:
         cursor.execute(
-            "INSERT INTO professores (id, nome, disciplinas, dias_indisponiveis, horarios_indisponiveis, turmas_permitidas, restricoes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (p.id, p.nome, json.dumps(p.disciplinas), json.dumps(list(p.dias_indisponiveis)), json.dumps(list(p.horarios_indisponiveis)), json.dumps(p.turmas_permitidas), json.dumps(list(p.restricoes)))
+            "INSERT INTO professores (id, nome, disciplinas, disponibilidade) VALUES (?, ?, ?, ?)",
+            (p.id, p.nome, json.dumps(p.disciplinas), json.dumps(list(p.disponibilidade_dias) + list(p.disponibilidade_horarios)))
         )
     conn.commit()
     conn.close()
@@ -130,10 +99,8 @@ def carregar_professores():
         Professor(
             nome=row[1],
             disciplinas=json.loads(row[2]),
-            dias_indisponiveis=set(json.loads(row[3])),
-            horarios_indisponiveis=set(json.loads(row[4])),
-            turmas_permitidas=json.loads(row[5]),
-            restricoes=set(json.loads(row[6])),
+            disponibilidade_dias=set(json.loads(row[3])[:7]),
+            disponibilidade_horarios=set(json.loads(row[3])[7:]),
             id=row[0]
         )
         for row in rows
@@ -229,45 +196,47 @@ def carregar_grade():
     conn.close()
     return aulas
 
-def salvar_periodos(periodos):
+def exportar_para_csv():
     conn = sqlite3.connect("escola.db")
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM periodos")
-    for p in periodos:
-        cursor.execute(
-            "INSERT INTO periodos (id, nome, inicio, fim) VALUES (?, ?, ?, ?)",
-            (p["id"], p["nome"], p["inicio"], p["fim"])
-        )
-    conn.commit()
+    turmas_df = pd.read_sql_query("SELECT * FROM turmas", conn)
+    profs_df = pd.read_sql_query("SELECT * FROM professores", conn)
+    discs_df = pd.read_sql_query("SELECT * FROM disciplinas", conn)
+    salas_df = pd.read_sql_query("SELECT * FROM salas", conn)
+    grades_df = pd.read_sql_query("SELECT * FROM grades", conn)
     conn.close()
+    with pd.ExcelWriter("dados_escola.xlsx", engine='openpyxl') as writer:
+        turmas_df.to_excel(writer, sheet_name="Turmas", index=False)
+        profs_df.to_excel(writer, sheet_name="Professores", index=False)
+        discs_df.to_excel(writer, sheet_name="Disciplinas", index=False)
+        salas_df.to_excel(writer, sheet_name="Salas", index=False)
+        grades_df.to_excel(writer, sheet_name="Grade", index=False)
 
-def carregar_periodos():
-    conn = sqlite3.connect("escola.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM periodos")
-    rows = cursor.fetchall()
-    periodos = [{"id": row[0], "nome": row[1], "inicio": row[2], "fim": row[3]} for row in rows]
-    conn.close()
-    return periodos
+def importar_de_csv(caminho):
+    try:
+        df_turmas = pd.read_excel(caminho, sheet_name="Turmas")
+        df_profs = pd.read_excel(caminho, sheet_name="Professores")
+        df_discs = pd.read_excel(caminho, sheet_name="Disciplinas")
+        df_salas = pd.read_excel(caminho, sheet_name="Salas")
+        df_grades = pd.read_excel(caminho, sheet_name="Grade")
 
-def salvar_feriados(feriados):
-    conn = sqlite3.connect("escola.db")
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM feriados")
-    for f in feriados:
-        cursor.execute(
-            "INSERT INTO feriados (id, data, motivo) VALUES (?, ?, ?)",
-            (f.id, f.data, f.motivo)
-        )
-    conn.commit()
-    conn.close()
+        conn = sqlite3.connect("escola.db")
+        cursor = conn.cursor()
 
-def carregar_feriados():
-    conn = sqlite3.connect("escola.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM feriados")
-    rows = cursor.fetchall()
-    from models import Feriado
-    feriados = [Feriado(data=row[1], motivo=row[2], id=row[0]) for row in rows]
-    conn.close()
-    return feriados
+        cursor.execute("DELETE FROM turmas")
+        cursor.execute("DELETE FROM professores")
+        cursor.execute("DELETE FROM disciplinas")
+        cursor.execute("DELETE FROM salas")
+        cursor.execute("DELETE FROM grades")
+
+        df_turmas.to_sql("turmas", conn, if_exists="append", index=False)
+        df_profs.to_sql("professores", conn, if_exists="append", index=False)
+        df_discs.to_sql("disciplinas", conn, if_exists="append", index=False)
+        df_salas.to_sql("salas", conn, if_exists="append", index=False)
+        df_grades.to_sql("grades", conn, if_exists="append", index=False)
+
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Erro ao importar: {e}")
+        return False
