@@ -394,4 +394,67 @@ with aba1:
                 tabela.to_excel(writer, sheet_name="Grade")
                 df.to_excel(writer, sheet_name="Dados", index=False)
             st.download_button("📥 Excel", output.getvalue(), "grade.xlsx")
-            pdf_path = "grade
+            pdf_path = "grade_horaria.pdf"
+            exportar_para_pdf(aulas, pdf_path)
+            with open(pdf_path, "rb") as f:
+                st.download_button("📄 PDF", f.read(), "grade.pdf")
+            if st.button("📤 Exportar Grade Completa"):
+                output = io.BytesIO()
+                exportar_grade_por_tipo(aulas, "Grade Completa (Turmas)", output)
+                st.download_button(
+                    "📥 Baixar Grade",
+                    output.getvalue(),
+                    "grade_exportada.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
+# =================== ABA 9: GRADE POR TURMA ===================
+with aba9:
+    st.header("Grade Semanal por Turma")
+    if st.session_state.aulas:
+        aulas = st.session_state.aulas
+        turmas_lista = sorted(list(set(a.turma for a in aulas)))
+        if turmas_lista:
+            turma_selecionada = st.selectbox("Selecione a turma", turmas_lista, key="turma_semanal")
+            for semana in range(1, 6):
+                st.markdown(f"#### Semana {semana}")
+                df = gerar_grade_por_turma_semana(aulas, turma_selecionada, semana)
+                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
+        else:
+            st.info("Nenhuma turma encontrada.")
+    else:
+        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
+
+# =================== ABA 10: GRADE POR SALA ===================
+with aba10:
+    st.header("Ocupação Semanal por Sala")
+    if st.session_state.aulas:
+        aulas = st.session_state.aulas
+        salas_lista = sorted(list(set(a.sala for a in aulas)))
+        if salas_lista:
+            sala_selecionada = st.selectbox("Selecione a sala", salas_lista, key="sala_semanal")
+            for semana in range(1, 6):
+                st.markdown(f"#### Semana {semana}")
+                df = gerar_grade_por_sala_semana(aulas, sala_selecionada, semana)
+                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
+        else:
+            st.info("Nenhuma sala encontrada.")
+    else:
+        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
+
+# =================== ABA 11: GRADE POR PROFESSOR ===================
+with aba11:
+    st.header("Grade Semanal por Professor")
+    if st.session_state.aulas:
+        aulas = st.session_state.aulas
+        professores_lista = sorted(list(set(a.professor for a in aulas)))
+        if professores_lista:
+            prof_selecionado = st.selectbox("Selecione o professor", professores_lista, key="prof_semanal")
+            for semana in range(1, 6):
+                st.markdown(f"#### Semana {semana}")
+                df = gerar_grade_por_professor_semana(aulas, prof_selecionado, semana)
+                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
+        else:
+            st.info("Nenhum professor encontrado.")
+    else:
+        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
