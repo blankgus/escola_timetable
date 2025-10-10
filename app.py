@@ -292,7 +292,6 @@ with aba7:
 # =================== ABA 1: INÍCIO ===================
 with aba1:
     st.header("Gerar Grade Horária")
-    
     col1, col2 = st.columns(2)
     with col1:
         if st.button("💾 Salvar no Banco"):
@@ -301,8 +300,10 @@ with aba1:
                 database.salvar_professores(st.session_state.professores)
                 database.salvar_disciplinas(st.session_state.disciplinas)
                 database.salvar_salas(st.session_state.salas)
-                database.salvar_periodos(st.session_state.periodos)
-                database.salvar_feriados(st.session_state.feriados)
+                database.salvar_periodos(st.session_state.get("periodos", []))
+                database.salvar_feriados(st.session_state.get("feriados", []))
+                if "aulas" in st.session_state and st.session_state.aulas:
+                    database.salvar_grade(st.session_state.aulas)
                 st.success("✅ Dados salvos!")
             except Exception as e:
                 st.error(f"❌ Erro: {str(e)}")
@@ -313,13 +314,15 @@ with aba1:
                 st.session_state.professores = database.carregar_professores()
                 st.session_state.disciplinas = database.carregar_disciplinas()
                 st.session_state.salas = database.carregar_salas()
-                st.session_state.periodos = database.carregar_periodos()
-                st.session_state.feriados = database.carregar_feriados()
+                st.session_state.periodos = database.carregar_periodos() or []
+                st.session_state.feriados = database.carregar_feriados() or []
+                st.session_state.aulas = database.carregar_grade()
                 st.success("✅ Dados carregados!")
                 st.rerun()
             except Exception as e:
                 st.error(f"❌ Erro: {str(e)}")
-    
+
+
     if not st.session_state.turmas or not st.session_state.professores or not st.session_state.disciplinas:
         st.warning("⚠️ Cadastre dados antes de gerar grade.")
         st.stop()
