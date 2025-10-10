@@ -107,15 +107,18 @@ with aba3:
     with st.form("add_prof"):
         nome = st.text_input("Nome")
         discs = st.multiselect("Disciplinas", disc_nomes)
-        dias = st.multiselect("Dias disponíveis", DIAS_SEMANA, default=["seg", "ter", "qua", "qui", "sex"])
-        horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,4,5,6,7], default=[1,2,3,5,6,7])
+        dias_indisp = st.multiselect("Dias Indisponíveis", DIAS_SEMANA, default=[])
+        horarios_indisp = st.multiselect("Horários Indisponíveis", [1,2,3,4,5,6,7], default=[])
+        restricoes_text = st.text_input("Restrições Específicas (ex: seg_4,qua_7)", "")
         if st.form_submit_button("➕ Adicionar"):
             if nome and discs:
+                restricoes_set = set([r.strip() for r in restricoes_text.split(",") if r.strip()])
                 st.session_state.professores.append(Professor(
                     nome=nome,
                     disciplinas=discs,
-                    disponibilidade_dias=set(dias),
-                    disponibilidade_horarios=set(horarios_disp)
+                    dias_indisponiveis=set(dias_indisp),
+                    horarios_indisponiveis=set(horarios_indisp),
+                    restricoes=restricoes_set
                 ))
                 st.rerun()
     for p in st.session_state.professores[:]:
@@ -124,14 +127,16 @@ with aba3:
                 nome = st.text_input("Nome", p.nome, key=f"pn_{p.id}")
                 discs_validas = [d for d in p.disciplinas if d in disc_nomes]
                 discs = st.multiselect("Disciplinas", disc_nomes, default=discs_validas, key=f"pd_{p.id}")
-                dias = st.multiselect("Dias disponíveis", DIAS_SEMANA, 
-                                     default=list(p.disponibilidade_dias), key=f"pdias_{p.id}")
-                horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,4,5,6,7],
-                                              default=list(p.disponibilidade_horarios), key=f"phor_{p.id}")
+                dias_indisp = st.multiselect("Dias Indisponíveis", DIAS_SEMANA, 
+                                     default=list(p.dias_indisponiveis), key=f"pdias_{p.id}")
+                horarios_indisp = st.multiselect("Horários Indisponíveis", [1,2,3,4,5,6,7],
+                                              default=list(p.horarios_indisponiveis), key=f"phor_{p.id}")
+                restricoes_text = st.text_input("Restrições Específicas (ex: seg_4,qua_7)", ", ".join(p.restricoes), key=f"restr_{p.id}")
                 col1, col2 = st.columns(2)
                 if col1.form_submit_button("💾 Salvar"):
+                    restricoes_set = set([r.strip() for r in restricoes_text.split(",") if r.strip()])
                     st.session_state.professores = [
-                        Professor(nome, discs, set(dias), set(horarios_disp), p.restricoes, p.id) if item.id == p.id else item
+                        Professor(nome, discs, set(dias_indisp), set(horarios_indisp), restricoes_set, p.id) if item.id == p.id else item
                         for item in st.session_state.professores
                     ]
                     st.rerun()
@@ -300,7 +305,7 @@ with aba7:
             if turma.serie in disc.series
         )
         capacidade_total = sum(
-            len(prof.disponibilidade_dias) * len(prof.disponibilidade_horarios)
+            len(set(DIAS_SEMANA) - prof.dias_indisponiveis) * len(set(range(1,8)) - prof.horarios_indisponiveis)
             for prof in st.session_state.professores
         )
         st.metric("Aulas necessárias", total_aulas)

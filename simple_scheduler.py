@@ -33,8 +33,10 @@ class SimpleGradeHoraria:
                 combinacoes = [(dia, h) for dia in self.dias for h in self.horarios]
                 random.shuffle(combinacoes)
                 for dia, horario in combinacoes:
-                    if dia not in prof.disponibilidade_dias or horario not in prof.disponibilidade_horarios:
+                    # Verificar indisponibilidade de dia e horário
+                    if dia in prof.dias_indisponiveis or horario in prof.horarios_indisponiveis:
                         continue
+                    # Verificar restrições específicas
                     if f"{dia}_{horario}" in prof.restricoes:
                         continue
                     conflito = False

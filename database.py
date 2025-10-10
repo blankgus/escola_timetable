@@ -18,8 +18,8 @@ def init_db():
             id TEXT PRIMARY KEY,
             nome TEXT,
             disciplinas TEXT,
-            disponibilidade_dias TEXT,
-            disponibilidade_horarios TEXT,
+            dias_indisponiveis TEXT,
+            horarios_indisponiveis TEXT,
             restricoes TEXT
         )
     """)
@@ -99,8 +99,8 @@ def salvar_professores(professores):
     cursor.execute("DELETE FROM professores")
     for p in professores:
         cursor.execute(
-            "INSERT INTO professores (id, nome, disciplinas, disponibilidade_dias, disponibilidade_horarios, restricoes) VALUES (?, ?, ?, ?, ?, ?)",
-            (p.id, p.nome, json.dumps(p.disciplinas), json.dumps(list(p.disponibilidade_dias)), json.dumps(list(p.disponibilidade_horarios)), json.dumps(list(p.restricoes)))
+            "INSERT INTO professores (id, nome, disciplinas, dias_indisponiveis, horarios_indisponiveis, restricoes) VALUES (?, ?, ?, ?, ?, ?)",
+            (p.id, p.nome, json.dumps(p.disciplinas), json.dumps(list(p.dias_indisponiveis)), json.dumps(list(p.horarios_indisponiveis)), json.dumps(list(p.restricoes)))
         )
     conn.commit()
     conn.close()
@@ -111,22 +111,17 @@ def carregar_professores():
     cursor.execute("SELECT * FROM professores")
     rows = cursor.fetchall()
     from models import Professor
-    professores = []
-    for row in rows:
-        if len(row) < 6:
-            # Preenche com valores padrão se faltar campos
-            while len(row) < 6:
-                row += ("",)
-        professores.append(
-            Professor(
-                nome=row[1],
-                disciplinas=json.loads(row[2]) if row[2] else [],
-                disponibilidade_dias=set(json.loads(row[3])) if row[3] else set(),
-                disponibilidade_horarios=set(json.loads(row[4])) if row[4] else set(),
-                restricoes=set(json.loads(row[5])) if row[5] else set(),
-                id=row[0]
-            )
+    professores = [
+        Professor(
+            nome=row[1],
+            disciplinas=json.loads(row[2]),
+            dias_indisponiveis=set(json.loads(row[3])),
+            horarios_indisponiveis=set(json.loads(row[4])),
+            restricoes=set(json.loads(row[5])),
+            id=row[0]
         )
+        for row in rows
+    ]
     conn.close()
     return professores
 
