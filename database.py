@@ -111,17 +111,22 @@ def carregar_professores():
     cursor.execute("SELECT * FROM professores")
     rows = cursor.fetchall()
     from models import Professor
-    professores = [
-        Professor(
-            nome=row[1],
-            disciplinas=json.loads(row[2]),
-            disponibilidade_dias=set(json.loads(row[3])),
-            disponibilidade_horarios=set(json.loads(row[4])),
-            restricoes=set(json.loads(row[5])),
-            id=row[0]
+    professores = []
+    for row in rows:
+        if len(row) < 6:
+            # Preenche com valores padrão se faltar campos
+            while len(row) < 6:
+                row += ("",)
+        professores.append(
+            Professor(
+                nome=row[1],
+                disciplinas=json.loads(row[2]) if row[2] else [],
+                disponibilidade_dias=set(json.loads(row[3])) if row[3] else set(),
+                disponibilidade_horarios=set(json.loads(row[4])) if row[4] else set(),
+                restricoes=set(json.loads(row[5])) if row[5] else set(),
+                id=row[0]
+            )
         )
-        for row in rows
-    ]
     conn.close()
     return professores
 
