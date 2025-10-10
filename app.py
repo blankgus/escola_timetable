@@ -35,7 +35,7 @@ def color_disciplina(val):
         for d in st.session_state.disciplinas:
             if d.nome == val:
                 return f'background-color: {d.cor_fundo}; color: {d.cor_fonte}; font-weight: bold'
-    if val == "RECREIO":
+    if val == "INTERVALO":
         return 'background-color: #FFD700; color: black; font-weight: bold; text-align: center'
     if val == "Sem Aula":
         return 'background-color: #F0F0F0; color: #666666; font-style: italic; text-align: center'
