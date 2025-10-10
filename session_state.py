@@ -22,29 +22,29 @@ def init_session_state():
             Turma("3emA", "3em", "manha"),
             Turma("3emB", "3em", "manha"),
         ]
-    if "professores" not in st.session_state:
-        st.session_state.professores = database.carregar_professores() or [
-            Professor("Ana A", ["Matemática"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Ana B", ["Matemática"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Bruno A", ["Português"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Bruno B", ["Português"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Carla A", ["História", "Geografia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Carla B", ["História", "Geografia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Diego A", ["Ciências", "Biologia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Diego B", ["Ciências", "Biologia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Eliane A", ["Inglês"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Eliane B", ["Inglês"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Fábio A", ["Educação Física"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Fábio B", ["Educação Física"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Gisele A", ["Artes"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Gisele B", ["Artes"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Hugo A", ["Física", "Matemática"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Hugo B", ["Física", "Matemática"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Isabel A", ["Química"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Isabel B", ["Química"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Jorge A", ["Filosofia", "Sociologia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            Professor("Jorge B", ["Filosofia", "Sociologia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-        ]
+if "professores" not in st.session_state:
+    st.session_state.professores = database.carregar_professores() or [
+        Professor("Ana A", ["Matemática"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Ana B", ["Matemática"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Bruno A", ["Português"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Bruno B", ["Português"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Carla A", ["História", "Geografia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Carla B", ["História", "Geografia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Diego A", ["Ciências", "Biologia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Diego B", ["Ciências", "Biologia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Eliane A", ["Inglês"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Eliane B", ["Inglês"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Fábio A", ["Educação Física"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Fábio B", ["Educação Física"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Gisele A", ["Artes"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Gisele B", ["Artes"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Hugo A", ["Física", "Matemática"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Hugo B", ["Física", "Matemática"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Isabel A", ["Química"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Isabel B", ["Química"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Jorge A", ["Filosofia", "Sociologia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+        Professor("Jorge B", ["Filosofia", "Sociologia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+    ]        ]
     if "disciplinas" not in st.session_state:
         st.session_state.disciplinas = database.carregar_disciplinas() or [
             Disciplina("Matemática", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "#4A90E2", "#FFFFFF"),
