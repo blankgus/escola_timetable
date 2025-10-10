@@ -349,6 +349,21 @@ with aba7:
         else:
             st.error("⚠️ Capacidade insuficiente")
 
+    # Adicione isto na aba 7 (Configurações)
+with aba7:
+    st.header("⚙️ Configurações")
+    if st.button("📥 Exportar Dados para Excel"):
+        database.exportar_para_csv()
+        with open("dados_escola.xlsx", "rb") as f:
+            st.download_button("Baixar Excel", f.read(), "dados_escola.xlsx")
+    uploaded = st.file_uploader("📤 Importar Dados do Excel", type=["xlsx"])
+    if uploaded:
+        if database.importar_de_csv(uploaded):
+            st.success("✅ Dados importados com sucesso!")
+            st.rerun()
+        else:
+            st.error("❌ Erro ao importar dados.")
+
     # === BOTÃO DE RESET ===
     if st.button("🗑️ Resetar Tudo (Apagar Dados)"):
         import os
