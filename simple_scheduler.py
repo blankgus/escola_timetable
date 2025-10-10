@@ -1,7 +1,6 @@
 from models import Aula, DIAS_SEMANA
 from collections import defaultdict
 import random
-import streamlit as st
 
 class SimpleGradeHoraria:
     def __init__(self, turmas, professores, disciplinas):
@@ -48,8 +47,7 @@ class SimpleGradeHoraria:
                             conflito = True
                             break
                     if not conflito:
-                        salas = st.session_state.salas if 'salas' in st.session_state else []
-                        sala_nome = salas[0].nome if salas else "Sala 1"
+                        sala_nome = "Sala 1"
                         aula = Aula(turma_nome, disc_nome, prof.nome, dia, horario, sala_nome)
                         aulas.append(aula)
                         prof_aulas[prof.nome].append(aula)
@@ -58,12 +56,4 @@ class SimpleGradeHoraria:
                         break
                 if atribuido:
                     break
-            if not atribuido and profs_possiveis:
-                prof = profs_possiveis[0]
-                dia = list(prof.disponibilidade_dias)[0] if prof.disponibilidade_dias else "seg"
-                horario = list(prof.disponibilidade_horarios)[0] if prof.disponibilidade_horarios else 1
-                salas = st.session_state.salas if 'salas' in st.session_state else []
-                sala_nome = salas[0].nome if salas else "Sala 1"
-                aula = Aula(turma_nome, disc_nome, prof.nome, dia, horario, sala_nome)
-                aulas.append(aula)
         return aulas
