@@ -10,7 +10,10 @@ def init_db():
             id TEXT PRIMARY KEY,
             nome TEXT,
             serie TEXT,
-            turno TEXT
+            turno TEXT,
+            tipo TEXT,
+            disciplinas_turma TEXT,
+            regras_neuro TEXT
         )
     """)
     cursor.execute("""
@@ -20,6 +23,7 @@ def init_db():
             disciplinas TEXT,
             dias_indisponiveis TEXT,
             horarios_indisponiveis TEXT,
+            turmas_permitidas TEXT,
             restricoes TEXT
         )
     """)
@@ -77,8 +81,8 @@ def salvar_turmas(turmas):
     cursor.execute("DELETE FROM turmas")
     for t in turmas:
         cursor.execute(
-            "INSERT INTO turmas (id, nome, serie, turno) VALUES (?, ?, ?, ?)",
-            (t.id, t.nome, t.serie, t.turno)
+            "INSERT INTO turmas (id, nome, serie, turno, tipo, disciplinas_turma, regras_neuro) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (t.id, t.nome, t.serie, t.turno, t.tipo, json.dumps([dt.__dict__ for dt in t.disciplinas_turma]), json.dumps(t.regras_neuro))
         )
     conn.commit()
     conn.close()
@@ -88,8 +92,19 @@ def carregar_turmas():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM turmas")
     rows = cursor.fetchall()
-    from models import Turma
-    turmas = [Turma(nome=row[1], serie=row[2], turno=row[3], id=row[0]) for row in rows]
+    from models import Turma, DisciplinaTurma
+    turmas = []
+    for row in rows:
+        dt_list = [DisciplinaTurma(**dt) for dt in json.loads(row[5])]
+        turmas.append(Turma(
+            nome=row[1],
+            serie=row[2],
+            turno=row[3],
+            tipo=row[4],
+            disciplinas_turma=dt_list,
+            regras_neuro=json.loads(row[6]),
+            id=row[0]
+        ))
     conn.close()
     return turmas
 
@@ -99,8 +114,8 @@ def salvar_professores(professores):
     cursor.execute("DELETE FROM professores")
     for p in professores:
         cursor.execute(
-            "INSERT INTO professores (id, nome, disciplinas, dias_indisponiveis, horarios_indisponiveis, restricoes) VALUES (?, ?, ?, ?, ?, ?)",
-            (p.id, p.nome, json.dumps(p.disciplinas), json.dumps(list(p.dias_indisponiveis)), json.dumps(list(p.horarios_indisponiveis)), json.dumps(list(p.restricoes)))
+            "INSERT INTO professores (id, nome, disciplinas, dias_indisponiveis, horarios_indisponiveis, turmas_permitidas, restricoes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (p.id, p.nome, json.dumps(p.disciplinas), json.dumps(list(p.dias_indisponiveis)), json.dumps(list(p.horarios_indisponiveis)), json.dumps(p.turmas_permitidas), json.dumps(list(p.restricoes)))
         )
     conn.commit()
     conn.close()
@@ -117,7 +132,8 @@ def carregar_professores():
             disciplinas=json.loads(row[2]),
             dias_indisponiveis=set(json.loads(row[3])),
             horarios_indisponiveis=set(json.loads(row[4])),
-            restricoes=set(json.loads(row[5])),
+            turmas_permitidas=json.loads(row[5]),
+            restricoes=set(json.loads(row[6])),
             id=row[0]
         )
         for row in rows
