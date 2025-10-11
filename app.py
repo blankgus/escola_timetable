@@ -1,3 +1,7 @@
+import sqlite3
+import json
+import uuid
+from models import Professor, Turma, Disciplina, Sala, Aula
 import streamlit as st
 import json
 import pandas as pd
