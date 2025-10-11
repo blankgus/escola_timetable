@@ -1,7 +1,7 @@
 import sqlite3
 import json
 import uuid
-import pandas as pd
+from models import Professor, Turma, Disciplina, Sala, Aula
 
 def init_db():
     conn = sqlite3.connect("escola.db")
