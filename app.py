@@ -334,6 +334,33 @@ with aba7:
             st.error("⚠️ Capacidade insuficiente")
 
 # =================== ABA 1: INÍCIO ===================
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("💾 Salvar no Banco"):
+        try:
+            database.salvar_turmas(st.session_state.turmas)
+            database.salvar_professores(st.session_state.professores)
+            database.salvar_disciplinas(st.session_state.disciplinas)
+            database.salvar_salas(st.session_state.salas)
+            if "aulas" in st.session_state:
+                database.salvar_grade(st.session_state.aulas)
+            st.success("✅ Dados salvos!")
+        except Exception as e:
+            st.error(f"❌ Erro: {str(e)}")
+with col2:
+    if st.button("🔄 Carregar do Banco"):
+        try:
+            st.session_state.turmas = database.carregar_turmas()
+            st.session_state.professores = database.carregar_professores()
+            st.session_state.disciplinas = database.carregar_disciplinas()
+            st.session_state.salas = database.carregar_salas()
+            st.session_state.aulas = database.carregar_grade()
+            st.success("✅ Dados carregados!")
+            st.rerun()
+        except Exception as e:
+            st.error(f"❌ Erro: {str(e)}")
+
+
 with aba1:
     st.header("Gerar Grade Horária")
     col1, col2 = st.columns(2)
