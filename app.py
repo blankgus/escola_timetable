@@ -283,6 +283,29 @@ with aba8:
 # =================== ABA 7: CONFIGURAÇÕES ===================
 with aba7:
     st.header("⚙️ Configurações")
+    
+    st.subheader("📥 Importar Dados")
+    uploaded_file = st.file_uploader("Escolha um arquivo Excel (.xlsx)", type="xlsx")
+    if uploaded_file:
+        sheet_name = st.selectbox("Selecione a aba a importar", ["turmas", "professores", "disciplinas", "salas"])
+        if st.button("Importar Dados"):
+            try:
+                if sheet_name == "turmas":
+                    database.importar_turmas_de_excel(uploaded_file)
+                elif sheet_name == "professores":
+                    database.importar_professores_de_excel(uploaded_file)
+                elif sheet_name == "disciplinas":
+                    database.importar_disciplinas_de_excel(uploaded_file)
+                elif sheet_name == "salas":
+                    database.importar_salas_de_excel(uploaded_file)
+                st.success(f"✅ {sheet_name.capitalize()} importadas com sucesso!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Erro ao importar: {str(e)}")
+
+
+with aba7:
+    st.header("⚙️ Configurações")
     if st.button("📥 Exportar Dados para Excel"):
         database.exportar_para_csv()
         with open("dados_escola.xlsx", "rb") as f:
