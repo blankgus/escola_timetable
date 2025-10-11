@@ -1,8 +1,6 @@
-import pandas as pd
 import sqlite3
 import json
 import uuid
-from models import Professor, Turma, Disciplina, Sala, Aula
 
 def init_db():
     conn = sqlite3.connect("escola.db")
@@ -199,51 +197,3 @@ def carregar_grade():
     ]
     conn.close()
     return aulas
-
-def importar_disciplinas_de_excel(caminho):
-    df = pd.read_excel(caminho)
-    disciplinas = []
-    for _, row in df.iterrows():
-        disciplinas.append(Disciplina(
-            nome=row["nome"],
-            carga_semanal=row["carga_semanal"],
-            tipo=row["tipo"],
-            series=row["series"].split(","),
-            cor_fundo=row["cor_fundo"],
-            cor_fonte=row["cor_fonte"]
-        ))
-    salvar_disciplinas(disciplinas)
-
-def importar_professores_de_excel(caminho):
-    df = pd.read_excel(caminho)
-    professores = []
-    for _, row in df.iterrows():
-        professores.append(Professor(
-            nome=row["nome"],
-            disciplinas=json.loads(row["disciplinas"]),
-            disponibilidade_dias=set(json.loads(row["dias_disponiveis"])),
-            disponibilidade_horarios=set(json.loads(row["horarios_disponiveis"]))
-        ))
-    salvar_professores(professores)
-
-def importar_turmas_de_excel(caminho):
-    df = pd.read_excel(caminho)
-    turmas = []
-    for _, row in df.iterrows():
-        turmas.append(Turma(
-            nome=row["nome"],
-            serie=row["serie"],
-            turno=row["turno"]
-        ))
-    salvar_turmas(turmas)
-
-def importar_salas_de_excel(caminho):
-    df = pd.read_excel(caminho)
-    salas = []
-    for _, row in df.iterrows():
-        salas.append(Sala(
-            nome=row["nome"],
-            capacidade=row["capacidade"],
-            tipo=row["tipo"]
-        ))
-    salvar_salas(salas)
