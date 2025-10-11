@@ -25,10 +25,11 @@ HORARIOS_REAIS = {
     1: "07:00-07:50",
     2: "07:50-08:40",
     3: "08:40-09:30",
-    4: "09:30-09:50",
+    4: "09:30-09:50",  # INTERVALO
     5: "09:50-10:40",
     6: "10:40-11:30",
-    7: "11:30-12:20"
+    7: "11:30-12:20",
+    8: "12:20-13:10"  # Nova hora final
 }
 
 try:
@@ -66,7 +67,7 @@ with aba2:
     st.header("Disciplinas")
     with st.form("add_disc"):
         nome = st.text_input("Nome")
-        carga = st.number_input("Carga", 1, 7, 3)
+        carga = st.number_input("Carga", 1, 35, 3)  # Limite de 35 aulas/semana
         tipo = st.selectbox("Tipo", ["pesada", "media", "leve", "pratica"])
         series = st.text_input("Séries", "6ano,7ano,8ano,9ano,1em,2em,3em")
         cor_fundo = st.color_picker("Cor de Fundo", "#4A90E2")
@@ -80,7 +81,7 @@ with aba2:
         with st.expander(f"{d.nome}"):
             with st.form(f"edit_disc_{d.id}"):
                 nome = st.text_input("Nome", d.nome, key=f"n_{d.id}")
-                carga = st.number_input("Carga", 1, 7, d.carga_semanal, key=f"c_{d.id}")
+                carga = st.number_input("Carga", 1, 35, d.carga_semanal, key=f"c_{d.id}")  # Limite de 35
                 tipo = st.selectbox("Tipo", ["pesada", "media", "leve", "pratica"], 
                                    index=["pesada", "media", "leve", "pratica"].index(d.tipo), key=f"t_{d.id}")
                 series = st.text_input("Séries", ", ".join(d.series), key=f"s_{d.id}")
@@ -107,18 +108,15 @@ with aba3:
     with st.form("add_prof"):
         nome = st.text_input("Nome")
         discs = st.multiselect("Disciplinas", disc_nomes)
-        dias_indisp = st.multiselect("Dias Indisponíveis", DIAS_SEMANA, default=[])
-        horarios_indisp = st.multiselect("Horários Indisponíveis", [1,2,3,4,5,6,7], default=[])
-        restricoes_text = st.text_input("Restrições Específicas (ex: seg_4,qua_7)", "")
+        dias = st.multiselect("Dias disponíveis", DIAS_SEMANA, default=["seg", "ter", "qua", "qui", "sex"])
+        horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,4,5,6,7,8], default=[1,2,3,5,6,7])
         if st.form_submit_button("➕ Adicionar"):
             if nome and discs:
-                restricoes_set = set([r.strip() for r in restricoes_text.split(",") if r.strip()])
                 st.session_state.professores.append(Professor(
                     nome=nome,
                     disciplinas=discs,
-                    dias_indisponiveis=set(dias_indisp),
-                    horarios_indisponiveis=set(horarios_indisp),
-                    restricoes=restricoes_set
+                    disponibilidade_dias=set(dias),
+                    disponibilidade_horarios=set(horarios_disp)
                 ))
                 st.rerun()
     for p in st.session_state.professores[:]:
@@ -127,16 +125,14 @@ with aba3:
                 nome = st.text_input("Nome", p.nome, key=f"pn_{p.id}")
                 discs_validas = [d for d in p.disciplinas if d in disc_nomes]
                 discs = st.multiselect("Disciplinas", disc_nomes, default=discs_validas, key=f"pd_{p.id}")
-                dias_indisp = st.multiselect("Dias Indisponíveis", DIAS_SEMANA, 
-                                     default=list(p.dias_indisponiveis), key=f"pdias_{p.id}")
-                horarios_indisp = st.multiselect("Horários Indisponíveis", [1,2,3,4,5,6,7],
-                                              default=list(p.horarios_indisponiveis), key=f"phor_{p.id}")
-                restricoes_text = st.text_input("Restrições Específicas (ex: seg_4,qua_7)", ", ".join(p.restricoes), key=f"restr_{p.id}")
+                dias = st.multiselect("Dias disponíveis", DIAS_SEMANA, 
+                                     default=list(p.disponibilidade_dias), key=f"pdias_{p.id}")
+                horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,4,5,6,7,8],
+                                              default=list(p.disponibilidade_horarios), key=f"phor_{p.id}")
                 col1, col2 = st.columns(2)
                 if col1.form_submit_button("💾 Salvar"):
-                    restricoes_set = set([r.strip() for r in restricoes_text.split(",") if r.strip()])
                     st.session_state.professores = [
-                        Professor(nome, discs, set(dias_indisp), set(horarios_indisp), restricoes_set, p.id) if item.id == p.id else item
+                        Professor(nome, discs, set(dias), set(horarios_disp), p.restricoes, p.id) if item.id == p.id else item
                         for item in st.session_state.professores
                     ]
                     st.rerun()
@@ -149,59 +145,25 @@ with aba3:
 # =================== ABA 4: TURMAS ===================
 with aba4:
     st.header("Turmas")
-    todas_disciplinas = [d.nome for d in st.session_state.disciplinas]
     with st.form("add_turma"):
         nome = st.text_input("Nome (ex: 8anoA)")
         serie = st.text_input("Série (ex: 8ano)")
         turno = st.selectbox("Turno", ["manha", "tarde"])
-        tipo = st.selectbox("Tipo", ["regular", "pcd", "inclusao"], index=0)
-        # Nova seção: Disciplinas da Turma
-        st.subheader("Disciplinas da Turma")
-        disciplinas_selecionadas = st.multiselect("Selecione as disciplinas", todas_disciplinas, default=[])
-        disciplinas_turma_atualizada = []
-        for disc_nome in disciplinas_selecionadas:
-            carga = st.number_input(f"Carga de {disc_nome}", min_value=1, max_value=7, value=3, key=f"carga_{disc_nome}")
-            profs_com_disciplina = [p.nome for p in st.session_state.professores if disc_nome in p.disciplinas]
-            prof = st.selectbox(f"Professor de {disc_nome}", profs_com_disciplina, key=f"prof_{disc_nome}")
-            fixo = st.checkbox(f"Professor fixo para {disc_nome}", key=f"fixo_{disc_nome}")
-            from models import DisciplinaTurma
-            disciplinas_turma_atualizada.append(DisciplinaTurma(disc_nome, carga, prof, fixo))
-
         if st.form_submit_button("➕ Adicionar"):
             if nome and serie:
-                from models import Turma
-                nova_turma = Turma(nome, serie, turno, tipo, disciplinas_turma_atualizada)
-                st.session_state.turmas.append(nova_turma)
+                st.session_state.turmas.append(Turma(nome, serie, turno))
                 st.rerun()
-
     for t in st.session_state.turmas[:]:
         with st.expander(f"{t.nome}"):
             with st.form(f"edit_turma_{t.id}"):
-                nome = st.text_input("Nome", t.nome, key=f"etn_{t.id}")
-                serie = st.text_input("Série", t.serie, key=f"ets_{t.id}")
-                turno = st.selectbox("Turno", ["manha", "tarde"], index=["manha", "tarde"].index(t.turno), key=f"ett_{t.id}")
-                tipo = st.selectbox("Tipo", ["regular", "pcd", "inclusao"], index=["regular", "pcd", "inclusao"].index(t.tipo), key=f"ettipo_{t.id}")
-
-                # Editar disciplinas da turma
-                st.subheader("Disciplinas da Turma")
-                disciplinas_selecionadas = st.multiselect("Selecione as disciplinas", todas_disciplinas, default=[dt.nome for dt in t.disciplinas_turma], key=f"edt_{t.id}")
-                disciplinas_turma_atualizada = []
-                for disc_nome in disciplinas_selecionadas:
-                    carga_atual = next((dt.carga_semanal for dt in t.disciplinas_turma if dt.nome == disc_nome), 3)
-                    prof_atual = next((dt.professor for dt in t.disciplinas_turma if dt.nome == disc_nome), "")
-                    fixo_atual = next((dt.professor_fixo for dt in t.disciplinas_turma if dt.nome == disc_nome), False)
-
-                    carga = st.number_input(f"Carga de {disc_nome}", min_value=1, max_value=7, value=carga_atual, key=f"ecarga_{t.id}_{disc_nome}")
-                    profs_com_disciplina = [p.nome for p in st.session_state.professores if disc_nome in p.disciplinas]
-                    prof = st.selectbox(f"Professor de {disc_nome}", profs_com_disciplina, index=profs_com_disciplina.index(prof_atual) if prof_atual in profs_com_disciplina else 0, key=f"eprof_{t.id}_{disc_nome}")
-                    fixo = st.checkbox(f"Professor fixo para {disc_nome}", value=fixo_atual, key=f"efixo_{t.id}_{disc_nome}")
-                    from models import DisciplinaTurma
-                    disciplinas_turma_atualizada.append(DisciplinaTurma(disc_nome, carga, prof, fixo))
-
+                nome = st.text_input("Nome", t.nome, key=f"tn_{t.id}")
+                serie = st.text_input("Série", t.serie, key=f"ts_{t.id}")
+                turno = st.selectbox("Turno", ["manha", "tarde"], 
+                                    index=["manha", "tarde"].index(t.turno), key=f"tt_{t.id}")
                 col1, col2 = st.columns(2)
                 if col1.form_submit_button("💾 Salvar"):
                     st.session_state.turmas = [
-                        Turma(nome, serie, turno, tipo, disciplinas_turma_atualizada, t.regras_neuro, t.id) if item.id == t.id else item
+                        Turma(nome, serie, turno, t.id) if item.id == t.id else item
                         for item in st.session_state.turmas
                     ]
                     st.rerun()
@@ -324,7 +286,7 @@ with aba7:
     st.session_state.max_aulas_professor_dia = st.slider(
         "Máximo de aulas por professor por dia",
         min_value=4,
-        max_value=7,
+        max_value=8,
         value=st.session_state.get("max_aulas_professor_dia", 7)
     )
     st.session_state.permitir_janelas = st.checkbox(
@@ -339,7 +301,7 @@ with aba7:
             if turma.serie in disc.series
         )
         capacidade_total = sum(
-            len(set(DIAS_SEMANA) - prof.dias_indisponiveis) * len(set(range(1,8)) - prof.horarios_indisponiveis)
+            len(prof.disponibilidade_dias) * len(prof.disponibilidade_horarios)
             for prof in st.session_state.professores
         )
         st.metric("Aulas necessárias", total_aulas)
@@ -348,37 +310,6 @@ with aba7:
             st.success("✅ Capacidade suficiente")
         else:
             st.error("⚠️ Capacidade insuficiente")
-
-    # Adicione isto na aba 7 (Configurações)
-with aba7:
-    st.header("⚙️ Configurações")
-    if st.button("📥 Exportar Dados para Excel"):
-        database.exportar_para_csv()
-        with open("dados_escola.xlsx", "rb") as f:
-            st.download_button("Baixar Excel", f.read(), "dados_escola.xlsx")
-    uploaded = st.file_uploader("📤 Importar Dados do Excel", type=["xlsx"])
-    if uploaded:
-        if database.importar_de_csv(uploaded):
-            st.success("✅ Dados importados com sucesso!")
-            st.rerun()
-        else:
-            st.error("❌ Erro ao importar dados.")
-
-    # === BOTÃO DE RESET ===
-    if st.button("🗑️ Resetar Tudo (Apagar Dados)"):
-        import os
-        if os.path.exists("escola.db"):
-            os.remove("escola.db")
-        st.success("✅ Banco de dados apagado. Reinicie a aplicação.")
-        st.rerun()
-
-    # === BOTÃO DE IMPORTAÇÃO DE DADOS EXEMPLO ===
-    if st.button("📥 Importar Dados de Exemplo"):
-        from session_state import init_session_state
-        # Isso irá recarregar os dados iniciais
-        init_session_state()
-        st.success("✅ Dados de exemplo carregados!")
-        st.rerun()
 
 # =================== ABA 1: INÍCIO ===================
 with aba1:
@@ -391,9 +322,9 @@ with aba1:
                 database.salvar_professores(st.session_state.professores)
                 database.salvar_disciplinas(st.session_state.disciplinas)
                 database.salvar_salas(st.session_state.salas)
-                database.salvar_periodos(st.session_state.get("periodos", []))
-                database.salvar_feriados(st.session_state.get("feriados", []))
-                if "aulas" in st.session_state and st.session_state.aulas:
+                database.salvar_periodos(st.session_state.periodos)
+                database.salvar_feriados(st.session_state.feriados)
+                if "aulas" in st.session_state:
                     database.salvar_grade(st.session_state.aulas)
                 st.success("✅ Dados salvos!")
             except Exception as e:
@@ -442,41 +373,50 @@ with aba1:
             st.session_state.aulas = aulas
             database.salvar_grade(aulas)
             st.success(f"✅ Grade gerada com {metodo}!")
+
+            # Debug: Mostrar aulas geradas
+            st.write(f"✅ Aulas geradas: {len(aulas)}")
+            if aulas:
+                st.write("Exemplo de aula:", aulas[0])
+
+            # Criar DataFrame
             df = pd.DataFrame([
                 {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala}
                 for a in aulas
             ])
-            tabela = df.pivot_table(
-                index=["Turma", "Horário"],
-                columns="Dia",
-                values="Disciplina",
-                aggfunc=lambda x: x.iloc[0],
-                fill_value=""
-            ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="")
-            novo_indice = []
-            for turma, horario_num in tabela.index:
-                horario_real = HORARIOS_REAIS.get(horario_num, f"{horario_num}ª aula")
-                novo_indice.append((turma, horario_real))
-            tabela.index = pd.MultiIndex.from_tuples(novo_indice)
-            st.dataframe(tabela.style.applymap(color_disciplina), use_container_width=True)
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                tabela.to_excel(writer, sheet_name="Grade")
-                df.to_excel(writer, sheet_name="Dados", index=False)
-            st.download_button("📥 Excel", output.getvalue(), "grade.xlsx")
-            pdf_path = "grade_horaria.pdf"
-            exportar_para_pdf(aulas, pdf_path)
-            with open(pdf_path, "rb") as f:
-                st.download_button("📄 PDF", f.read(), "grade.pdf")
-            if st.button("📤 Exportar Grade Completa"):
+
+            if not df.empty and 'Disciplina' in df.columns:
+                tabela = df.pivot_table(
+                    index=["Turma", "Horário"],
+                    columns="Dia",
+                    values="Disciplina",
+                    aggfunc=lambda x: x.iloc[0],
+                    fill_value="Sem Aula"
+                ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="Sem Aula")
+                # Adicionar INTERVALO
+                for idx in tabela.index:
+                    if idx[1] == 4:  # Horário 4
+                        dias_uteis = ["seg", "ter", "qua", "qui", "sex"]
+                        for dia in dias_uteis:
+                            if dia in tabela.columns:
+                                tabela.loc[idx, dia] = "INTERVALO"
+                novo_indice = []
+                for turma, horario_num in tabela.index:
+                    horario_real = HORARIOS_REAIS.get(horario_num, f"{horario_num}ª aula")
+                    novo_indice.append((turma, horario_real))
+                tabela.index = pd.MultiIndex.from_tuples(novo_indice)
+                st.dataframe(tabela.style.applymap(color_disciplina), use_container_width=True)
                 output = io.BytesIO()
-                exportar_grade_por_tipo(aulas, "Grade Completa (Turmas)", output)
-                st.download_button(
-                    "📥 Baixar Grade",
-                    output.getvalue(),
-                    "grade_exportada.xlsx",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    tabela.to_excel(writer, sheet_name="Grade")
+                    df.to_excel(writer, sheet_name="Dados", index=False)
+                st.download_button("📥 Excel", output.getvalue(), "grade.xlsx")
+                pdf_path = "grade_horaria.pdf"
+                exportar_para_pdf(aulas, pdf_path)
+                with open(pdf_path, "rb") as f:
+                    st.download_button("📄 PDF", f.read(), "grade.pdf")
+            else:
+                st.warning("⚠️ Nenhuma aula foi gerada. Verifique os cadastros e restrições.")
 
 # =================== ABA 9: GRADE POR TURMA ===================
 with aba9:
