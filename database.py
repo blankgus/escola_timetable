@@ -19,7 +19,9 @@ def init_db():
             id TEXT PRIMARY KEY,
             nome TEXT,
             disciplinas TEXT,
-            disponibilidade TEXT
+            disponibilidade_dias TEXT,
+            disponibilidade_horarios TEXT,
+            restricoes TEXT
         )
     """)
     cursor.execute("""
@@ -83,8 +85,8 @@ def salvar_professores(professores):
     cursor.execute("DELETE FROM professores")
     for p in professores:
         cursor.execute(
-            "INSERT INTO professores (id, nome, disciplinas, disponibilidade) VALUES (?, ?, ?, ?)",
-            (p.id, p.nome, json.dumps(p.disciplinas), json.dumps(list(p.disponibilidade_dias) + list(p.disponibilidade_horarios)))
+            "INSERT INTO professores (id, nome, disciplinas, disponibilidade_dias, disponibilidade_horarios, restricoes) VALUES (?, ?, ?, ?, ?, ?)",
+            (p.id, p.nome, json.dumps(p.disciplinas), json.dumps(list(p.disponibilidade_dias)), json.dumps(list(p.disponibilidade_horarios)), json.dumps(list(p.restricoes)))
         )
     conn.commit()
     conn.close()
@@ -99,8 +101,9 @@ def carregar_professores():
         Professor(
             nome=row[1],
             disciplinas=json.loads(row[2]),
-            disponibilidade_dias=set(json.loads(row[3])[:7]),
-            disponibilidade_horarios=set(json.loads(row[3])[7:]),
+            disponibilidade_dias=set(json.loads(row[3])),
+            disponibilidade_horarios=set(json.loads(row[4])),
+            restricoes=set(json.loads(row[5])),
             id=row[0]
         )
         for row in rows
@@ -196,47 +199,50 @@ def carregar_grade():
     conn.close()
     return aulas
 
-def exportar_para_csv():
-    conn = sqlite3.connect("escola.db")
-    turmas_df = pd.read_sql_query("SELECT * FROM turmas", conn)
-    profs_df = pd.read_sql_query("SELECT * FROM professores", conn)
-    discs_df = pd.read_sql_query("SELECT * FROM disciplinas", conn)
-    salas_df = pd.read_sql_query("SELECT * FROM salas", conn)
-    grades_df = pd.read_sql_query("SELECT * FROM grades", conn)
-    conn.close()
-    with pd.ExcelWriter("dados_escola.xlsx", engine='openpyxl') as writer:
-        turmas_df.to_excel(writer, sheet_name="Turmas", index=False)
-        profs_df.to_excel(writer, sheet_name="Professores", index=False)
-        discs_df.to_excel(writer, sheet_name="Disciplinas", index=False)
-        salas_df.to_excel(writer, sheet_name="Salas", index=False)
-        grades_df.to_excel(writer, sheet_name="Grade", index=False)
+def importar_disciplinas_de_excel(caminho):
+    df = pd.read_excel(caminho)
+    disciplinas = []
+    for _, row in df.iterrows():
+        disciplinas.append(Disciplina(
+            nome=row["nome"],
+            carga_semanal=row["carga_semanal"],
+            tipo=row["tipo"],
+            series=row["series"].split(","),
+            cor_fundo=row["cor_fundo"],
+            cor_fonte=row["cor_fonte"]
+        ))
+    salvar_disciplinas(disciplinas)
 
-def importar_de_csv(caminho):
-    try:
-        df_turmas = pd.read_excel(caminho, sheet_name="Turmas")
-        df_profs = pd.read_excel(caminho, sheet_name="Professores")
-        df_discs = pd.read_excel(caminho, sheet_name="Disciplinas")
-        df_salas = pd.read_excel(caminho, sheet_name="Salas")
-        df_grades = pd.read_excel(caminho, sheet_name="Grade")
+def importar_professores_de_excel(caminho):
+    df = pd.read_excel(caminho)
+    professores = []
+    for _, row in df.iterrows():
+        professores.append(Professor(
+            nome=row["nome"],
+            disciplinas=json.loads(row["disciplinas"]),
+            disponibilidade_dias=set(json.loads(row["dias_disponiveis"])),
+            disponibilidade_horarios=set(json.loads(row["horarios_disponiveis"]))
+        ))
+    salvar_professores(professores)
 
-        conn = sqlite3.connect("escola.db")
-        cursor = conn.cursor()
+def importar_turmas_de_excel(caminho):
+    df = pd.read_excel(caminho)
+    turmas = []
+    for _, row in df.iterrows():
+        turmas.append(Turma(
+            nome=row["nome"],
+            serie=row["serie"],
+            turno=row["turno"]
+        ))
+    salvar_turmas(turmas)
 
-        cursor.execute("DELETE FROM turmas")
-        cursor.execute("DELETE FROM professores")
-        cursor.execute("DELETE FROM disciplinas")
-        cursor.execute("DELETE FROM salas")
-        cursor.execute("DELETE FROM grades")
-
-        df_turmas.to_sql("turmas", conn, if_exists="append", index=False)
-        df_profs.to_sql("professores", conn, if_exists="append", index=False)
-        df_discs.to_sql("disciplinas", conn, if_exists="append", index=False)
-        df_salas.to_sql("salas", conn, if_exists="append", index=False)
-        df_grades.to_sql("grades", conn, if_exists="append", index=False)
-
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        print(f"Erro ao importar: {e}")
-        return False
+def importar_salas_de_excel(caminho):
+    df = pd.read_excel(caminho)
+    salas = []
+    for _, row in df.iterrows():
+        salas.append(Sala(
+            nome=row["nome"],
+            capacidade=row["capacidade"],
+            tipo=row["tipo"]
+        ))
+    salvar_salas(salas)

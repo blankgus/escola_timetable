@@ -278,7 +278,29 @@ with aba8:
 
 # =================== ABA 7: CONFIGURAÇÕES ===================
 with aba7:
-    st.header("Configurações Avançadas")
+    st.header("⚙️ Configurações")
+    if st.button("📥 Exportar Dados para Excel"):
+        database.exportar_para_csv()
+        with open("dados_escola.xlsx", "rb") as f:
+            st.download_button("Baixar Excel", f.read(), "dados_escola.xlsx")
+    uploaded = st.file_uploader("📤 Importar Dados do Excel", type=["xlsx"])
+    if uploaded:
+        sheet_name = st.selectbox("Selecione a aba a importar", ["turmas", "professores", "disciplinas", "salas"])
+        if st.button("Importar Dados"):
+            try:
+                if sheet_name == "turmas":
+                    database.importar_turmas_de_excel(uploaded)
+                elif sheet_name == "professores":
+                    database.importar_professores_de_excel(uploaded)
+                elif sheet_name == "disciplinas":
+                    database.importar_disciplinas_de_excel(uploaded)
+                elif sheet_name == "salas":
+                    database.importar_salas_de_excel(uploaded)
+                st.success(f"✅ {sheet_name.capitalize()} importadas com sucesso!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Erro ao importar: {str(e)}")
+
     st.session_state.relaxar_horario_ideal = st.checkbox(
         "✅ Relaxar horário ideal (disciplinas pesadas podem ser à tarde)",
         value=st.session_state.get("relaxar_horario_ideal", False)
