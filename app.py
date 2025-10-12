@@ -28,7 +28,8 @@ HORARIOS_REAIS = {
     4: "09:30-09:50",
     5: "09:50-10:40",
     6: "10:40-11:30",
-    7: "11:30-12:20"
+    7: "11:30-12:20",
+    8: "12:20-13:10"
 }
 
 try:
@@ -109,13 +110,18 @@ with aba3:
         discs = st.multiselect("Disciplinas", disc_nomes)
         dias = st.multiselect("Dias disponíveis", DIAS_SEMANA, default=["seg", "ter", "qua", "qui", "sex"])
         horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,4,5,6,7], default=[1,2,3,5,6,7])
+        restricoes = st.text_area("Restrições (ex: seg_1, qua_3, qui_5)", help="Digite as restrições no formato 'dia_horario', separadas por vírgula")
         if st.form_submit_button("➕ Adicionar"):
             if nome and discs:
+                restricoes_set = set()
+                if restricoes.strip():
+                    restricoes_set = {r.strip() for r in restricoes.split(",")}
                 st.session_state.professores.append(Professor(
                     nome=nome,
                     disciplinas=discs,
                     disponibilidade_dias=set(dias),
-                    disponibilidade_horarios=set(horarios_disp)
+                    disponibilidade_horarios=set(horarios_disp),
+                    restricoes=restricoes_set
                 ))
                 st.rerun()
     for p in st.session_state.professores[:]:
@@ -128,10 +134,15 @@ with aba3:
                                      default=list(p.disponibilidade_dias), key=f"pdias_{p.id}")
                 horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,4,5,6,7],
                                               default=list(p.disponibilidade_horarios), key=f"phor_{p.id}")
+                restricoes_atual = ", ".join(p.restricoes) if p.restricoes else ""
+                restricoes = st.text_area("Restrições (ex: seg_1, qua_3, qui_5)", value=restricoes_atual, help="Digite as restrições no formato 'dia_horario', separadas por vírgula", key=f"restr_{p.id}")
                 col1, col2 = st.columns(2)
                 if col1.form_submit_button("💾 Salvar"):
+                    restricoes_set = set()
+                    if restricoes.strip():
+                        restricoes_set = {r.strip() for r in restricoes.split(",")}
                     st.session_state.professores = [
-                        Professor(nome, discs, set(dias), set(horarios_disp), p.restricoes, p.id) if item.id == p.id else item
+                        Professor(nome, discs, set(dias), set(horarios_disp), restricoes_set, p.id) if item.id == p.id else item
                         for item in st.session_state.professores
                     ]
                     st.rerun()
@@ -407,7 +418,58 @@ with aba1:
                     "grade_exportada.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
+# =================== ABA 3: PROFESSORES ===================
+with aba3:
+    st.header("Professores")
+    disc_nomes = [d.nome for d in st.session_state.disciplinas] or ["Nenhuma"]
+    with st.form("add_prof"):
+        nome = st.text_input("Nome")
+        discs = st.multiselect("Disciplinas", disc_nomes)
+        dias = st.multiselect("Dias disponíveis", DIAS_SEMANA, default=["seg", "ter", "qua", "qui", "sex"])
+        horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,4,5,6,7], default=[1,2,3,5,6,7])
+        restricoes = st.text_area("Restrições (ex: seg_1, qua_3, qui_5)", help="Digite as restrições no formato 'dia_horario', separadas por vírgula")
+        if st.form_submit_button("➕ Adicionar"):
+            if nome and discs:
+                restricoes_set = set()
+                if restricoes.strip():
+                    restricoes_set = {r.strip() for r in restricoes.split(",")}
+                st.session_state.professores.append(Professor(
+                    nome=nome,
+                    disciplinas=discs,
+                    disponibilidade_dias=set(dias),
+                    disponibilidade_horarios=set(horarios_disp),
+                    restricoes=restricoes_set
+                ))
+                st.rerun()
+    for p in st.session_state.professores[:]:
+        with st.expander(p.nome):
+            with st.form(f"edit_prof_{p.id}"):
+                nome = st.text_input("Nome", p.nome, key=f"pn_{p.id}")
+                discs_validas = [d for d in p.disciplinas if d in disc_nomes]
+                discs = st.multiselect("Disciplinas", disc_nomes, default=discs_validas, key=f"pd_{p.id}")
+                dias = st.multiselect("Dias disponíveis", DIAS_SEMANA, 
+                                     default=list(p.disponibilidade_dias), key=f"pdias_{p.id}")
+                horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,4,5,6,7],
+                                              default=list(p.disponibilidade_horarios), key=f"phor_{p.id}")
+                restricoes_atual = ", ".join(p.restricoes) if p.restricoes else ""
+                restricoes = st.text_area("Restrições (ex: seg_1, qua_3, qui_5)", value=restricoes_atual, help="Digite as restrições no formato 'dia_horario', separadas por vírgula", key=f"restr_{p.id}")
+                col1, col2 = st.columns(2)
+                if col1.form_submit_button("💾 Salvar"):
+                    restricoes_set = set()
+                    if restricoes.strip():
+                        restricoes_set = {r.strip() for r in restricoes.split(",")}
+                    st.session_state.professores = [
+                        Professor(nome, discs, set(dias), set(horarios_disp), restricoes_set, p.id) if item.id == p.id else item
+                        for item in st.session_state.professores
+                    ]
+                    st.rerun()
+                if col2.form_submit_button("🗑️ Excluir"):
+                    st.session_state.professores = [
+                        item for item in st.session_state.professores if item.id != p.id
+                    ]
+                    st.rerun()
 
+        
 # =================== ABA 9: GRADE POR TURMA ===================
 with aba9:
     st.header("Grade Semanal por Turma")
