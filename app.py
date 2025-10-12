@@ -25,7 +25,7 @@ HORARIOS_REAIS = {
     1: "07:00-07:50",
     2: "07:50-08:40",
     3: "08:40-09:30",
-    4: "09:30-09:50",
+    4: "09:30-09:50",  # INTERVALO
     5: "09:50-10:40",
     6: "10:40-11:30",
     7: "11:30-12:20"
@@ -271,7 +271,7 @@ with aba8:
                     st.rerun()
                 if col2.form_submit_button("🗑️ Excluir"):
                     st.session_state.feriados = [
-                        item for item in st.session_state.feriados if item["id"] != f["id"]
+                        item for item in st.session_state.feriados if item.id != f.id
                     ]
                     st.rerun()
 
@@ -310,22 +310,6 @@ with aba7:
         else:
             st.error("⚠️ Capacidade insuficiente")
 
-    # === BOTÃO DE RESET ===
-    if st.button("🗑️ Resetar Tudo (Apagar Dados)"):
-        import os
-        if os.path.exists("escola.db"):
-            os.remove("escola.db")
-        st.success("✅ Banco de dados apagado. Reinicie a aplicação.")
-        st.rerun()
-
-    # === BOTÃO DE IMPORTAÇÃO DE DADOS EXEMPLO ===
-    if st.button("📥 Importar Dados de Exemplo"):
-        from session_state import init_session_state
-        # Isso irá recarregar os dados iniciais
-        init_session_state()
-        st.success("✅ Dados de exemplo carregados!")
-        st.rerun()
-
 # =================== ABA 1: INÍCIO ===================
 with aba1:
     st.header("Gerar Grade Horária")
@@ -337,9 +321,9 @@ with aba1:
                 database.salvar_professores(st.session_state.professores)
                 database.salvar_disciplinas(st.session_state.disciplinas)
                 database.salvar_salas(st.session_state.salas)
-                database.salvar_periodos(st.session_state.get("periodos", []))
-                database.salvar_feriados(st.session_state.get("feriados", []))
-                if "aulas" in st.session_state and st.session_state.aulas:
+                database.salvar_periodos(st.session_state.periodos)
+                database.salvar_feriados(st.session_state.feriados)
+                if "aulas" in st.session_state:
                     database.salvar_grade(st.session_state.aulas)
                 st.success("✅ Dados salvos!")
             except Exception as e:
@@ -392,44 +376,37 @@ with aba1:
                 {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala}
                 for a in aulas
             ])
-            # === VERIFICAÇÃO ANTES DO PIVOT_TABLE ===
-            if not aulas:
-                st.warning("⚠️ Nenhuma aula foi gerada. Verifique os cadastros e restrições.")
-            else:
-                if 'Disciplina' not in df.columns:
-                    st.error("❌ A coluna 'Disciplina' não foi encontrada.")
-                else:
-                    tabela = df.pivot_table(
-                        index=["Turma", "Horário"],
-                        columns="Dia",
-                        values="Disciplina",
-                        aggfunc=lambda x: x.iloc[0],
-                        fill_value="Sem Aula"
-                    ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="Sem Aula")
-                    novo_indice = []
-                    for turma, horario_num in tabela.index:
-                        horario_real = HORARIOS_REAIS.get(horario_num, f"{horario_num}ª aula")
-                        novo_indice.append((turma, horario_real))
-                    tabela.index = pd.MultiIndex.from_tuples(novo_indice)
-                    st.dataframe(tabela.style.applymap(color_disciplina), use_container_width=True)
-                    output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                        tabela.to_excel(writer, sheet_name="Grade")
-                        df.to_excel(writer, sheet_name="Dados", index=False)
-                    st.download_button("📥 Excel", output.getvalue(), "grade.xlsx")
-                    pdf_path = "grade_horaria.pdf"
-                    exportar_para_pdf(aulas, pdf_path)
-                    with open(pdf_path, "rb") as f:
-                        st.download_button("📄 PDF", f.read(), "grade.pdf")
-                    if st.button("📤 Exportar Grade Completa"):
-                        output = io.BytesIO()
-                        exportar_grade_por_tipo(aulas, "Grade Completa (Turmas)", output)
-                        st.download_button(
-                            "📥 Baixar Grade",
-                            output.getvalue(),
-                            "grade_exportada.xlsx",
-                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
+            tabela = df.pivot_table(
+                index=["Turma", "Horário"],
+                columns="Dia",
+                values="Disciplina",
+                aggfunc=lambda x: x.iloc[0],
+                fill_value=""
+            ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="")
+            novo_indice = []
+            for turma, horario_num in tabela.index:
+                horario_real = HORARIOS_REAIS.get(horario_num, f"{horario_num}ª aula")
+                novo_indice.append((turma, horario_real))
+            tabela.index = pd.MultiIndex.from_tuples(novo_indice)
+            st.dataframe(tabela.style.applymap(color_disciplina), use_container_width=True)
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                tabela.to_excel(writer, sheet_name="Grade")
+                df.to_excel(writer, sheet_name="Dados", index=False)
+            st.download_button("📥 Excel", output.getvalue(), "grade.xlsx")
+            pdf_path = "grade_horaria.pdf"
+            exportar_para_pdf(aulas, pdf_path)
+            with open(pdf_path, "rb") as f:
+                st.download_button("📄 PDF", f.read(), "grade.pdf")
+            if st.button("📤 Exportar Grade Completa"):
+                output = io.BytesIO()
+                exportar_grade_por_tipo(aulas, "Grade Completa (Turmas)", output)
+                st.download_button(
+                    "📥 Baixar Grade",
+                    output.getvalue(),
+                    "grade_exportada.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
 # =================== ABA 9: GRADE POR TURMA ===================
 with aba9:
