@@ -177,24 +177,21 @@ def exportar_grade_por_tipo(aulas, tipo_grade, caminho="grade_exportada.xlsx"):
         elif tipo_grade == "Grade por Turma":
             turmas_lista = sorted(list(set(a.turma for a in aulas)))
             for turma in turmas_lista:
-                for semana in range(1, 6):
-                    df = gerar_grade_por_turma_semana(aulas, turma, semana)
-                    nome_aba = f"Turma_{turma}_Sem{semana}"[:31]
-                    df.to_excel(writer, sheet_name=nome_aba)
+                df = gerar_grade_por_turma_semana(aulas, turma, 1)  # Apenas semana 1
+                nome_aba = f"Turma_{turma}"[:31]
+                df.to_excel(writer, sheet_name=nome_aba)
         elif tipo_grade == "Grade por Sala":
             salas_lista = sorted(list(set(a.sala for a in aulas)))
             for sala in salas_lista:
-                for semana in range(1, 6):
-                    df = gerar_grade_por_sala_semana(aulas, sala, semana)
-                    nome_aba = f"Sala_{sala}_Sem{semana}"[:31]
-                    df.to_excel(writer, sheet_name=nome_aba)
+                df = gerar_grade_por_sala_semana(aulas, sala, 1)  # Apenas semana 1
+                nome_aba = f"Sala_{sala}"[:31]
+                df.to_excel(writer, sheet_name=nome_aba)
         elif tipo_grade == "Grade por Professor":
             professores_lista = sorted(list(set(a.professor for a in aulas)))
             for prof in professores_lista:
-                for semana in range(1, 6):
-                    df = gerar_grade_por_professor_semana(aulas, prof, semana)
-                    nome_aba = f"Prof_{prof}_Sem{semana}"[:31]
-                    df.to_excel(writer, sheet_name=nome_aba)
+                df = gerar_grade_por_professor_semana(aulas, prof, 1)  # Apenas semana 1
+                nome_aba = f"Prof_{prof}"[:31]
+                df.to_excel(writer, sheet_name=nome_aba)
 
 def gerar_relatorio_professor(professor_nome, aulas):
     return pd.DataFrame([{"Professor": professor_nome, "Total Aulas": len([a for a in aulas if a.professor == professor_nome])}])

@@ -1,7 +1,6 @@
 import streamlit as st
-from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA
+from models import Turma, Professor, Disciplina, Sala
 import database
-import uuid
 
 def init_session_state():
     database.init_db()
