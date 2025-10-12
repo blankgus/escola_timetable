@@ -25,7 +25,7 @@ HORARIOS_REAIS = {
     1: "07:00-07:50",
     2: "07:50-08:40",
     3: "08:40-09:30",
-    4: "09:30-09:50",  # INTERVALO
+    4: "09:30-09:50",
     5: "09:50-10:40",
     6: "10:40-11:30",
     7: "11:30-12:20"
@@ -271,7 +271,7 @@ with aba8:
                     st.rerun()
                 if col2.form_submit_button("🗑️ Excluir"):
                     st.session_state.feriados = [
-                        item for item in st.session_state.feriados if item.id != f.id
+                        item for item in st.session_state.feriados if item.id != f["id"]
                     ]
                     st.rerun()
 
@@ -321,9 +321,9 @@ with aba1:
                 database.salvar_professores(st.session_state.professores)
                 database.salvar_disciplinas(st.session_state.disciplinas)
                 database.salvar_salas(st.session_state.salas)
-                database.salvar_periodos(st.session_state.periodos)
-                database.salvar_feriados(st.session_state.feriados)
-                if "aulas" in st.session_state:
+                database.salvar_periodos(st.session_state.get("periodos", []))
+                database.salvar_feriados(st.session_state.get("feriados", []))
+                if "aulas" in st.session_state and st.session_state.aulas:
                     database.salvar_grade(st.session_state.aulas)
                 st.success("✅ Dados salvos!")
             except Exception as e:
@@ -381,8 +381,8 @@ with aba1:
                 columns="Dia",
                 values="Disciplina",
                 aggfunc=lambda x: x.iloc[0],
-                fill_value=""
-            ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="")
+                fill_value="Sem Aula"
+            ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="Sem Aula")
             novo_indice = []
             for turma, horario_num in tabela.index:
                 horario_real = HORARIOS_REAIS.get(horario_num, f"{horario_num}ª aula")
