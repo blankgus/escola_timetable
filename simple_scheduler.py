@@ -10,10 +10,10 @@ class SimpleGradeHoraria:
         self.dias = ["seg", "ter", "qua", "qui", "sex"]
         self.horarios = [1, 2, 3, 4, 5, 6, 7]
         self.carga_turma = defaultdict(lambda: defaultdict(int))
-        # Agora, usa a lista de DisciplinaTurma de cada turma
         for turma in turmas:
-            for dt in turma.disciplinas_turma:
-                self.carga_turma[turma.nome][dt.nome] = dt.carga_semanal
+            for nome_disc, disc in self.disciplinas.items():
+                if turma.serie in disc.series:
+                    self.carga_turma[turma.nome][nome_disc] = disc.carga_semanal
 
     def gerar_grade(self):
         aulas = []
@@ -27,27 +27,14 @@ class SimpleGradeHoraria:
         random.shuffle(pendentes)
         for turma_nome, disc_nome in pendentes:
             atribuido = False
-            # Aqui, filtramos professores com base na turma
-            turma = next((t for t in self.turmas if t.nome == turma_nome), None)
-            if turma:
-                dt = next((dt for dt in turma.disciplinas_turma if dt.nome == disc_nome), None)
-                if dt and dt.professor_fixo:
-                    profs_possiveis = [p for p in self.professores.values() if p.nome == dt.professor and disc_nome in p.disciplinas]
-                else:
-                    profs_possiveis = [p for p in self.professores.values() if disc_nome in p.disciplinas]
-            else:
-                profs_possiveis = [p for p in self.professores.values() if disc_nome in p.disciplinas]
-
+            profs_possiveis = [p for p in self.professores.values() if disc_nome in p.disciplinas]
             random.shuffle(profs_possiveis)
             for prof in profs_possiveis:
-                # Verificar se o professor pode lecionar para esta turma
-                if prof.turmas_permitidas and turma_nome not in prof.turmas_permitidas:
-                    continue
                 combinacoes = [(dia, h) for dia in self.dias for h in self.horarios]
                 random.shuffle(combinacoes)
                 for dia, horario in combinacoes:
-                    # Verificar indisponibilidade de dia e horário
-                    if dia in prof.dias_indisponiveis or horario in prof.horarios_indisponiveis:
+                    # Verificar disponibilidade de dia e horário
+                    if dia not in prof.disponibilidade_dias or horario not in prof.disponibilidade_horarios:
                         continue
                     # Verificar restrições específicas
                     if f"{dia}_{horario}" in prof.restricoes:
