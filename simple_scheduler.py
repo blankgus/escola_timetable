@@ -8,7 +8,7 @@ class SimpleGradeHoraria:
         self.professores = {p.nome: p for p in professores}
         self.disciplinas = {d.nome: d for d in disciplinas}
         self.dias = ["seg", "ter", "qua", "qui", "sex"]
-        self.horarios = [1, 2, 3, 4, 5, 6, 7]
+        self.horarios = [1, 2, 3, 4, 5, 6, 7, 8]  # Agora com 8 horários
         self.carga_turma = defaultdict(lambda: defaultdict(int))
         for turma in turmas:
             for nome_disc, disc in self.disciplinas.items():
