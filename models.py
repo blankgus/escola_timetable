@@ -1,4 +1,4 @@
- # models.py
+# models.py
 from dataclasses import dataclass, field
 from typing import List, Set
 import uuid
@@ -11,6 +11,7 @@ class DisciplinaTurma:
     nome: str              # Nome da disciplina
     carga_semanal: int     # Quantas aulas por semana
     professor: str         # Nome do professor responsável
+    professor_fixo: bool = False  # Se o professor é fixo para esta disciplina na turma
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
@@ -37,7 +38,9 @@ class Turma:
     nome: str
     serie: str
     turno: str
+    tipo: str = "regular"  # "pcd", "inclusao", "regular"
     disciplinas_turma: List[DisciplinaTurma] = field(default_factory=list)
+    regras_neuro: List[str] = field(default_factory=list)
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
@@ -59,6 +62,6 @@ class Aula:
 
 @dataclass
 class Feriado:
-    str
+     str
     motivo: str
     id: str = field(default_factory=lambda: str(uuid.uuid4()))

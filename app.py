@@ -145,56 +145,25 @@ with aba3:
 # =================== ABA 4: TURMAS ===================
 with aba4:
     st.header("Turmas")
-    todas_disciplinas = [d.nome for d in st.session_state.disciplinas]
     with st.form("add_turma"):
         nome = st.text_input("Nome (ex: 8anoA)")
         serie = st.text_input("Série (ex: 8ano)")
         turno = st.selectbox("Turno", ["manha", "tarde"])
-        # Nova seção: Disciplinas da Turma
-        st.subheader("Disciplinas da Turma")
-        disciplinas_selecionadas = st.multiselect("Selecione as disciplinas", todas_disciplinas, default=[])
-        disciplinas_turma_atualizada = []
-        for disc_nome in disciplinas_selecionadas:
-            carga = st.number_input(f"Carga de {disc_nome}", min_value=1, max_value=7, value=3, key=f"carga_{disc_nome}")
-            profs_com_disciplina = [p.nome for p in st.session_state.professores if disc_nome in p.disciplinas]
-            prof = st.selectbox(f"Professor de {disc_nome}", profs_com_disciplina, key=f"prof_{disc_nome}")
-            fixo = st.checkbox(f"Professor fixo para {disc_nome}", key=f"fixo_{disc_nome}")
-            disciplinas_turma_atualizada.append(DisciplinaTurma(disc_nome, carga, prof, fixo))
-
         if st.form_submit_button("➕ Adicionar"):
             if nome and serie:
-                from models import Turma
-                nova_turma = Turma(nome, serie, turno, disciplinas_turma_atualizada)
-                st.session_state.turmas.append(nova_turma)
+                st.session_state.turmas.append(Turma(nome, serie, turno))
                 st.rerun()
-
     for t in st.session_state.turmas[:]:
         with st.expander(f"{t.nome}"):
             with st.form(f"edit_turma_{t.id}"):
-                nome = st.text_input("Nome", t.nome, key=f"etn_{t.id}")
-                serie = st.text_input("Série", t.serie, key=f"ets_{t.id}")
-                turno = st.selectbox("Turno", ["manha", "tarde"], index=["manha", "tarde"].index(t.turno), key=f"ett_{t.id}")
-
-                # Editar disciplinas da turma
-                st.subheader("Disciplinas da Turma")
-                disciplinas_selecionadas = st.multiselect("Selecione as disciplinas", todas_disciplinas, default=[dt.nome for dt in t.disciplinas_turma], key=f"edt_{t.id}")
-                disciplinas_turma_atualizada = []
-                for disc_nome in disciplinas_selecionadas:
-                    carga_atual = next((dt.carga_semanal for dt in t.disciplinas_turma if dt.nome == disc_nome), 3)
-                    prof_atual = next((dt.professor for dt in t.disciplinas_turma if dt.nome == disc_nome), "")
-                    fixo_atual = next((dt.professor_fixo for dt in t.disciplinas_turma if dt.nome == disc_nome), False)
-
-                    carga = st.number_input(f"Carga de {disc_nome}", min_value=1, max_value=7, value=carga_atual, key=f"ecarga_{t.id}_{disc_nome}")
-                    profs_com_disciplina = [p.nome for p in st.session_state.professores if disc_nome in p.disciplinas]
-                    prof = st.selectbox(f"Professor de {disc_nome}", profs_com_disciplina, index=profs_com_disciplina.index(prof_atual) if prof_atual in profs_com_disciplina else 0, key=f"eprof_{t.id}_{disc_nome}")
-                    fixo = st.checkbox(f"Professor fixo para {disc_nome}", value=fixo_atual, key=f"efixo_{t.id}_{disc_nome}")
-                    from models import DisciplinaTurma
-                    disciplinas_turma_atualizada.append(DisciplinaTurma(disc_nome, carga, prof, fixo))
-
+                nome = st.text_input("Nome", t.nome, key=f"tn_{t.id}")
+                serie = st.text_input("Série", t.serie, key=f"ts_{t.id}")
+                turno = st.selectbox("Turno", ["manha", "tarde"], 
+                                    index=["manha", "tarde"].index(t.turno), key=f"tt_{t.id}")
                 col1, col2 = st.columns(2)
                 if col1.form_submit_button("💾 Salvar"):
                     st.session_state.turmas = [
-                        Turma(nome, serie, turno, disciplinas_turma_atualizada, t.id) if item.id == t.id else item
+                        Turma(nome, serie, turno, t.id) if item.id == t.id else item
                         for item in st.session_state.turmas
                     ]
                     st.rerun()
@@ -413,8 +382,8 @@ with aba1:
                 columns="Dia",
                 values="Disciplina",
                 aggfunc=lambda x: x.iloc[0],
-                fill_value="Sem Aula"
-            ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="Sem Aula")
+                fill_value=""
+            ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="")
             # Adicionar INTERVALO
             for idx in tabela.index:
                 if idx[1] == 4:  # Horário 4
