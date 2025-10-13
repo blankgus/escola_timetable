@@ -5,7 +5,7 @@ import pandas as pd
 import io
 import traceback
 from session_state import init_session_state
-from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA
+from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA, DisciplinaTurma
 from scheduler_ortools import GradeHorariaORTools
 from export import (
     exportar_para_excel,
@@ -58,10 +58,9 @@ st.title("🕒 Gerador Inteligente de Grade Horária")
 abas = st.tabs([
     "🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas",
     "🏫 Salas", "📅 Calendário", "⚙️ Configurações", "🗓️ Feriados",
-    "🎒 Grade por Turma", "🏫 Grade por Sala", "👨‍🏫 Grade por Professor",
-    "📥 Importar PDF"
+    "🎒 Grade por Turma", "🏫 Grade por Sala", "👨‍🏫 Grade por Professor"
 ])
-(aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8, aba9, aba10, aba11, aba12) = abas
+(aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8, aba9, aba10, aba11) = abas
 
 # =================== ABA 2: DISCIPLINAS ===================
 with aba2:
@@ -146,25 +145,56 @@ with aba3:
 # =================== ABA 4: TURMAS ===================
 with aba4:
     st.header("Turmas")
+    todas_disciplinas = [d.nome for d in st.session_state.disciplinas]
     with st.form("add_turma"):
         nome = st.text_input("Nome (ex: 8anoA)")
         serie = st.text_input("Série (ex: 8ano)")
         turno = st.selectbox("Turno", ["manha", "tarde"])
+        # Nova seção: Disciplinas da Turma
+        st.subheader("Disciplinas da Turma")
+        disciplinas_selecionadas = st.multiselect("Selecione as disciplinas", todas_disciplinas, default=[])
+        disciplinas_turma_atualizada = []
+        for disc_nome in disciplinas_selecionadas:
+            carga = st.number_input(f"Carga de {disc_nome}", min_value=1, max_value=7, value=3, key=f"carga_{disc_nome}")
+            profs_com_disciplina = [p.nome for p in st.session_state.professores if disc_nome in p.disciplinas]
+            prof = st.selectbox(f"Professor de {disc_nome}", profs_com_disciplina, key=f"prof_{disc_nome}")
+            fixo = st.checkbox(f"Professor fixo para {disc_nome}", key=f"fixo_{disc_nome}")
+            disciplinas_turma_atualizada.append(DisciplinaTurma(disc_nome, carga, prof, fixo))
+
         if st.form_submit_button("➕ Adicionar"):
             if nome and serie:
-                st.session_state.turmas.append(Turma(nome, serie, turno))
+                from models import Turma
+                nova_turma = Turma(nome, serie, turno, disciplinas_turma_atualizada)
+                st.session_state.turmas.append(nova_turma)
                 st.rerun()
+
     for t in st.session_state.turmas[:]:
         with st.expander(f"{t.nome}"):
             with st.form(f"edit_turma_{t.id}"):
-                nome = st.text_input("Nome", t.nome, key=f"tn_{t.id}")
-                serie = st.text_input("Série", t.serie, key=f"ts_{t.id}")
-                turno = st.selectbox("Turno", ["manha", "tarde"], 
-                                    index=["manha", "tarde"].index(t.turno), key=f"tt_{t.id}")
+                nome = st.text_input("Nome", t.nome, key=f"etn_{t.id}")
+                serie = st.text_input("Série", t.serie, key=f"ets_{t.id}")
+                turno = st.selectbox("Turno", ["manha", "tarde"], index=["manha", "tarde"].index(t.turno), key=f"ett_{t.id}")
+
+                # Editar disciplinas da turma
+                st.subheader("Disciplinas da Turma")
+                disciplinas_selecionadas = st.multiselect("Selecione as disciplinas", todas_disciplinas, default=[dt.nome for dt in t.disciplinas_turma], key=f"edt_{t.id}")
+                disciplinas_turma_atualizada = []
+                for disc_nome in disciplinas_selecionadas:
+                    carga_atual = next((dt.carga_semanal for dt in t.disciplinas_turma if dt.nome == disc_nome), 3)
+                    prof_atual = next((dt.professor for dt in t.disciplinas_turma if dt.nome == disc_nome), "")
+                    fixo_atual = next((dt.professor_fixo for dt in t.disciplinas_turma if dt.nome == disc_nome), False)
+
+                    carga = st.number_input(f"Carga de {disc_nome}", min_value=1, max_value=7, value=carga_atual, key=f"ecarga_{t.id}_{disc_nome}")
+                    profs_com_disciplina = [p.nome for p in st.session_state.professores if disc_nome in p.disciplinas]
+                    prof = st.selectbox(f"Professor de {disc_nome}", profs_com_disciplina, index=profs_com_disciplina.index(prof_atual) if prof_atual in profs_com_disciplina else 0, key=f"eprof_{t.id}_{disc_nome}")
+                    fixo = st.checkbox(f"Professor fixo para {disc_nome}", value=fixo_atual, key=f"efixo_{t.id}_{disc_nome}")
+                    from models import DisciplinaTurma
+                    disciplinas_turma_atualizada.append(DisciplinaTurma(disc_nome, carga, prof, fixo))
+
                 col1, col2 = st.columns(2)
                 if col1.form_submit_button("💾 Salvar"):
                     st.session_state.turmas = [
-                        Turma(nome, serie, turno, t.id) if item.id == t.id else item
+                        Turma(nome, serie, turno, disciplinas_turma_atualizada, t.id) if item.id == t.id else item
                         for item in st.session_state.turmas
                     ]
                     st.rerun()
@@ -467,58 +497,3 @@ with aba11:
             st.info("Nenhum professor encontrado.")
     else:
         st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
-
-# =================== ABA 12: IMPORTAR PDF ===================
-with aba12:
-    st.header("📥 Importar Dados do PDF")
-    st.info("Esta função irá extrair os dados do arquivo 'Professores_Manha.pdf' e popular o sistema.")
-    
-    if st.button("📤 Extrair dados do PDF"):
-        try:
-            from extrair_pdf import extrair_dados_do_pdf
-            with st.spinner("Extraindo dados do PDF..."):
-                professores_extraidos, disciplinas_extraidas, turmas_extraidas, aulas_extraidas = extrair_dados_do_pdf()
-                
-                # Atualizar session_state
-                st.session_state.professores = professores_extraidos
-                st.session_state.disciplinas = disciplinas_extraidas
-                st.session_state.turmas = turmas_extraidas
-                st.session_state.aulas = aulas_extraidas
-                
-                # Salvar no banco de dados
-                database.salvar_professores(professores_extraidos)
-                database.salvar_disciplinas(disciplinas_extraidas)
-                database.salvar_turmas(turmas_extraidas)
-                database.salvar_grade(aulas_extraidas)
-                
-                st.success(f"✅ Dados extraídos com sucesso!")
-                st.success(f"   - {len(professores_extraidos)} professores")
-                st.success(f"   - {len(disciplinas_extraidas)} disciplinas")
-                st.success(f"   - {len(turmas_extraidas)} turmas")
-                st.success(f"   - {len(aulas_extraidas)} aulas")
-                st.info("💡 Vá para as abas de 'Professores', 'Disciplinas', 'Turmas' ou 'Grade por...' para visualizar os dados importados.")
-        except Exception as e:
-            st.error(f"❌ Erro ao importar dados do PDF: {str(e)}")
-            st.code(traceback.format_exc())
-    
-    st.subheader("📊 Dados Importados")
-    if st.session_state.professores:
-        st.write("**Professores:**")
-        df_profs = pd.DataFrame([{"Nome": p.nome, "Disciplinas": ", ".join(p.disciplinas), "Dias Disponíveis": ", ".join(sorted(p.disponibilidade_dias)), "Horários Disponíveis": ", ".join(map(str, sorted(p.disponibilidade_horarios)))} for p in st.session_state.professores])
-        st.dataframe(df_profs, use_container_width=True)
-    else:
-        st.info("Nenhum professor importado.")
-        
-    if st.session_state.turmas:
-        st.write("**Turmas:**")
-        df_turmas = pd.DataFrame([{"Nome": t.nome, "Série": t.serie, "Turno": t.turno} for t in st.session_state.turmas])
-        st.dataframe(df_turmas, use_container_width=True)
-    else:
-        st.info("Nenhuma turma importada.")
-        
-    if st.session_state.aulas:
-        st.write("**Aulas Importadas (exibindo 10 primeiras):**")
-        df_aulas = pd.DataFrame([{"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala} for a in st.session_state.aulas[:10]])
-        st.dataframe(df_aulas, use_container_width=True)
-    else:
-        st.info("Nenhuma aula importada.")

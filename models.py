@@ -6,11 +6,19 @@ import uuid
 DIAS_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]
 
 @dataclass
+class DisciplinaTurma:
+    """Representa uma disciplina alocada para uma turma específica."""
+    nome: str              # Nome da disciplina
+    carga_semanal: int     # Quantas aulas por semana
+    professor: str         # Nome do professor responsável
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+
+@dataclass
 class Disciplina:
     nome: str
-    carga_semanal: int = 3
-    tipo: str = "media"
-    series: List[str] = field(default_factory=list)
+    carga_semanal: int
+    tipo: str
+    series: List[str]
     cor_fundo: str = "#4A90E2"
     cor_fonte: str = "#FFFFFF"
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -18,9 +26,9 @@ class Disciplina:
 @dataclass
 class Professor:
     nome: str
-    disciplinas: List[str] = field(default_factory=list)
-    disponibilidade_dias: Set[str] = field(default_factory=set)
-    disponibilidade_horarios: Set[int] = field(default_factory=set)
+    disciplinas: List[str]
+    disponibilidade_dias: Set[str]
+    disponibilidade_horarios: Set[int]
     restricoes: Set[str] = field(default_factory=set)
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
@@ -28,7 +36,8 @@ class Professor:
 class Turma:
     nome: str
     serie: str
-    turno: str = "manha"
+    turno: str
+    disciplinas_turma: List[DisciplinaTurma] = field(default_factory=list)
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
@@ -50,6 +59,6 @@ class Aula:
 
 @dataclass
 class Feriado:
-    data: str
+     str
     motivo: str
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
