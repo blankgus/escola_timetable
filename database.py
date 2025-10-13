@@ -1,32 +1,40 @@
 import sqlite3
 import json
 import uuid
+from models import Turma, Professor, Disciplina, Sala, DisciplinaTurma
 
 def init_db():
     conn = sqlite3.connect("escola.db")
     cursor = conn.cursor()
+    
+    # Turmas
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS turmas (
             id TEXT PRIMARY KEY,
-            nome TEXT,
+            nome TEXT UNIQUE,
             serie TEXT,
-            turno TEXT
+            turno TEXT,
+            disciplinas_turma TEXT
         )
     """)
+    
+    # Professores
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS professores (
             id TEXT PRIMARY KEY,
-            nome TEXT,
+            nome TEXT UNIQUE,
             disciplinas TEXT,
             disponibilidade_dias TEXT,
             disponibilidade_horarios TEXT,
             restricoes TEXT
         )
     """)
+    
+    # Disciplinas
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS disciplinas (
             id TEXT PRIMARY KEY,
-            nome TEXT,
+            nome TEXT UNIQUE,
             carga_semanal INTEGER,
             tipo TEXT,
             series TEXT,
@@ -34,25 +42,17 @@ def init_db():
             cor_fonte TEXT
         )
     """)
+    
+    # Salas
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS salas (
             id TEXT PRIMARY KEY,
-            nome TEXT,
+            nome TEXT UNIQUE,
             capacidade INTEGER,
             tipo TEXT
         )
     """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS grades (
-            id TEXT PRIMARY KEY,
-            turma TEXT,
-            disciplina TEXT,
-            professor TEXT,
-            dia TEXT,
-            horario INTEGER,
-            sala TEXT
-        )
-    """)
+    
     conn.commit()
     conn.close()
 
@@ -62,8 +62,14 @@ def salvar_turmas(turmas):
     cursor.execute("DELETE FROM turmas")
     for t in turmas:
         cursor.execute(
-            "INSERT INTO turmas (id, nome, serie, turno) VALUES (?, ?, ?, ?)",
-            (t.id, t.nome, t.serie, t.turno)
+            "INSERT INTO turmas (id, nome, serie, turno, disciplinas_turma) VALUES (?, ?, ?, ?, ?)",
+            (
+                t.id,
+                t.nome,
+                t.serie,
+                t.turno,
+                json.dumps([dt.__dict__ for dt in t.disciplinas_turma])
+            )
         )
     conn.commit()
     conn.close()
@@ -73,9 +79,19 @@ def carregar_turmas():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM turmas")
     rows = cursor.fetchall()
-    from models import Turma
-    turmas = [Turma(nome=row[1], serie=row[2], turno=row[3], id=row[0]) for row in rows]
     conn.close()
+    
+    turmas = []
+    for row in rows:
+        discs_data = json.loads(row[4]) if row[4] else []
+        discs_turma = [DisciplinaTurma(**d) for d in discs_data]
+        turmas.append(Turma(
+            nome=row[1],
+            serie=row[2],
+            turno=row[3],
+            disciplinas_turma=discs_turma,
+            id=row[0]
+        ))
     return turmas
 
 def salvar_professores(professores):
@@ -85,7 +101,14 @@ def salvar_professores(professores):
     for p in professores:
         cursor.execute(
             "INSERT INTO professores (id, nome, disciplinas, disponibilidade_dias, disponibilidade_horarios, restricoes) VALUES (?, ?, ?, ?, ?, ?)",
-            (p.id, p.nome, json.dumps(p.disciplinas), json.dumps(list(p.disponibilidade_dias)), json.dumps(list(p.disponibilidade_horarios)), json.dumps(list(p.restricoes)))
+            (
+                p.id,
+                p.nome,
+                json.dumps(p.disciplinas),
+                json.dumps(list(p.disponibilidade_dias)),
+                json.dumps(list(p.disponibilidade_horarios)),
+                json.dumps(list(p.restricoes))
+            )
         )
     conn.commit()
     conn.close()
@@ -95,8 +118,9 @@ def carregar_professores():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM professores")
     rows = cursor.fetchall()
-    from models import Professor
-    professores = [
+    conn.close()
+    
+    return [
         Professor(
             nome=row[1],
             disciplinas=json.loads(row[2]),
@@ -107,8 +131,6 @@ def carregar_professores():
         )
         for row in rows
     ]
-    conn.close()
-    return professores
 
 def salvar_disciplinas(disciplinas):
     conn = sqlite3.connect("escola.db")
@@ -117,7 +139,15 @@ def salvar_disciplinas(disciplinas):
     for d in disciplinas:
         cursor.execute(
             "INSERT INTO disciplinas (id, nome, carga_semanal, tipo, series, cor_fundo, cor_fonte) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (d.id, d.nome, d.carga_semanal, d.tipo, json.dumps(d.series), d.cor_fundo, d.cor_fonte)
+            (
+                d.id,
+                d.nome,
+                d.carga_semanal,
+                d.tipo,
+                json.dumps(d.series),
+                d.cor_fundo,
+                d.cor_fonte
+            )
         )
     conn.commit()
     conn.close()
@@ -127,8 +157,9 @@ def carregar_disciplinas():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM disciplinas")
     rows = cursor.fetchall()
-    from models import Disciplina
-    disciplinas = [
+    conn.close()
+    
+    return [
         Disciplina(
             nome=row[1],
             carga_semanal=row[2],
@@ -140,8 +171,6 @@ def carregar_disciplinas():
         )
         for row in rows
     ]
-    conn.close()
-    return disciplinas
 
 def salvar_salas(salas):
     conn = sqlite3.connect("escola.db")
@@ -160,40 +189,9 @@ def carregar_salas():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM salas")
     rows = cursor.fetchall()
-    from models import Sala
-    salas = [Sala(nome=row[1], capacidade=row[2], tipo=row[3], id=row[0]) for row in rows]
     conn.close()
-    return salas
-
-def salvar_grade(aulas):
-    conn = sqlite3.connect("escola.db")
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM grades")
-    for a in aulas:
-        cursor.execute(
-            "INSERT INTO grades (id, turma, disciplina, professor, dia, horario, sala) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (a.id, a.turma, a.disciplina, a.professor, a.dia, a.horario, a.sala)
-        )
-    conn.commit()
-    conn.close()
-
-def carregar_grade():
-    conn = sqlite3.connect("escola.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM grades")
-    rows = cursor.fetchall()
-    from models import Aula
-    aulas = [
-        Aula(
-            turma=row[1],
-            disciplina=row[2],
-            professor=row[3],
-            dia=row[4],
-            horario=row[5],
-            sala=row[6],
-            id=row[0]
-        )
+    
+    return [
+        Sala(nome=row[1], capacidade=row[2], tipo=row[3], id=row[0])
         for row in rows
     ]
-    conn.close()
-    return aulas
