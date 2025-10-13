@@ -9,14 +9,7 @@ from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA, DisciplinaTu
 from scheduler_ortools import GradeHorariaORTools
 from export import (
     exportar_para_excel,
-    exportar_para_pdf,
-    gerar_relatorio_professor,
-    gerar_relatorio_todos_professores,
-    gerar_relatorio_disciplina_sala,
-    gerar_grade_por_turma_semana,
-    gerar_grade_por_sala_semana,
-    gerar_grade_por_professor_semana,
-    exportar_grade_por_tipo
+    exportar_para_pdf
 )
 import database
 from simple_scheduler import SimpleGradeHoraria
@@ -57,10 +50,9 @@ st.title("🕒 Gerador Inteligente de Grade Horária")
 
 abas = st.tabs([
     "🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas",
-    "🏫 Salas", "📅 Calendário", "⚙️ Configurações", "🗓️ Feriados",
-    "🎒 Grade por Turma", "🏫 Grade por Sala", "👨‍🏫 Grade por Professor"
+    "🏫 Salas", "⚙️ Configurações"
 ])
-(aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8, aba9, aba10, aba11) = abas
+(aba1, aba2, aba3, aba4, aba5, aba6) = abas
 
 # =================== ABA 2: DISCIPLINAS ===================
 with aba2:
@@ -110,13 +102,18 @@ with aba3:
         discs = st.multiselect("Disciplinas", disc_nomes)
         dias = st.multiselect("Dias disponíveis", DIAS_SEMANA, default=["seg", "ter", "qua", "qui", "sex"])
         horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,4,5,6,7], default=[1,2,3,5,6,7])
+        horarios_indisp = st.text_input("Horários INDISPONÍVEIS (ex: seg_1, qua_3)", "")
         if st.form_submit_button("➕ Adicionar"):
             if nome and discs:
+                horarios_indisp_set = set()
+                if horarios_indisp.strip():
+                    horarios_indisp_set = {h.strip() for h in horarios_indisp.split(",")}
                 st.session_state.professores.append(Professor(
                     nome=nome,
                     disciplinas=discs,
                     disponibilidade_dias=set(dias),
-                    disponibilidade_horarios=set(horarios_disp)
+                    disponibilidade_horarios=set(horarios_disp),
+                    horarios_indisponiveis=horarios_indisp_set
                 ))
                 st.rerun()
     for p in st.session_state.professores[:]:
@@ -129,10 +126,15 @@ with aba3:
                                      default=list(p.disponibilidade_dias), key=f"pdias_{p.id}")
                 horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,4,5,6,7],
                                               default=list(p.disponibilidade_horarios), key=f"phor_{p.id}")
+                horarios_indisp_atual = ", ".join(sorted(p.horarios_indisponiveis))
+                horarios_indisp = st.text_input("Horários INDISPONÍVEIS (ex: seg_1, qua_3)", horarios_indisp_atual, key=f"hind_{p.id}")
                 col1, col2 = st.columns(2)
                 if col1.form_submit_button("💾 Salvar"):
+                    horarios_indisp_set = set()
+                    if horarios_indisp.strip():
+                        horarios_indisp_set = {h.strip() for h in horarios_indisp.split(",")}
                     st.session_state.professores = [
-                        Professor(nome, discs, set(dias), set(horarios_disp), p.restricoes, p.id) if item.id == p.id else item
+                        Professor(nome, discs, set(dias), set(horarios_disp), horarios_indisp_set, p.id) if item.id == p.id else item
                         for item in st.session_state.professores
                     ]
                     st.rerun()
@@ -145,6 +147,7 @@ with aba3:
 # =================== ABA 4: TURMAS ===================
 with aba4:
     st.header("Turmas")
+    todas_disciplinas = [d.nome for d in st.session_state.disciplinas]
     with st.form("add_turma"):
         nome = st.text_input("Nome (ex: 8anoA)")
         serie = st.text_input("Série (ex: 8ano)")
@@ -160,10 +163,29 @@ with aba4:
                 serie = st.text_input("Série", t.serie, key=f"ts_{t.id}")
                 turno = st.selectbox("Turno", ["manha", "tarde"], 
                                     index=["manha", "tarde"].index(t.turno), key=f"tt_{t.id}")
+                
+                # Editar disciplinas da turma
+                st.subheader("Disciplinas da Turma")
+                disciplinas_selecionadas = st.multiselect("Selecione as disciplinas", todas_disciplinas, default=[dt.nome for dt in t.disciplinas_turma], key=f"edt_{t.id}")
+                disciplinas_turma_atualizada = []
+                for disc_nome in disciplinas_selecionadas:
+                    carga_atual = next((dt.carga_semanal for dt in t.disciplinas_turma if dt.nome == disc_nome), 3)
+                    prof_atual = next((dt.professor for dt in t.disciplinas_turma if dt.nome == disc_nome), "")
+                    fixo_atual = next((dt.professor_fixo for dt in t.disciplinas_turma if dt.nome == disc_nome), False)
+
+                    carga = st.number_input(f"Carga de {disc_nome}", min_value=1, max_value=7, value=carga_atual, key=f"ecarga_{t.id}_{disc_nome}")
+                    profs_com_disciplina = [p.nome for p in st.session_state.professores if disc_nome in p.disciplinas]
+                    prof = st.selectbox(f"Professor de {disc_nome}", profs_com_disciplina, 
+                                       index=profs_com_disciplina.index(prof_atual) if prof_atual in profs_com_disciplina else 0, 
+                                       key=f"eprof_{t.id}_{disc_nome}")
+                    fixo = st.checkbox(f"Professor fixo para {disc_nome}", value=fixo_atual, key=f"efixo_{t.id}_{disc_nome}")
+                    
+                    disciplinas_turma_atualizada.append(DisciplinaTurma(disc_nome, carga, prof, fixo))
+
                 col1, col2 = st.columns(2)
                 if col1.form_submit_button("💾 Salvar"):
                     st.session_state.turmas = [
-                        Turma(nome, serie, turno, t.id) if item.id == t.id else item
+                        Turma(nome, serie, turno, disciplinas_turma_atualizada, t.id) if item.id == t.id else item
                         for item in st.session_state.turmas
                     ]
                     st.rerun()
@@ -204,112 +226,15 @@ with aba5:
                     ]
                     st.rerun()
 
-# =================== ABA 6: CALENDÁRIO ===================
+# =================== ABA 6: CONFIGURAÇÕES ===================
 with aba6:
-    st.header("Períodos")
-    if "periodos" not in st.session_state:
-        st.session_state.periodos = []
-    with st.form("add_periodo"):
-        nome = st.text_input("Nome (ex: 1º Bimestre)")
-        inicio = st.date_input("Início")
-        fim = st.date_input("Fim")
-        if st.form_submit_button("➕ Adicionar"):
-            if nome:
-                st.session_state.periodos.append({
-                    "nome": nome,
-                    "inicio": str(inicio),
-                    "fim": str(fim),
-                    "id": str(uuid.uuid4())
-                })
-                st.rerun()
-    for p in st.session_state.periodos[:]:
-        with st.expander(p["nome"]):
-            with st.form(f"edit_periodo_{p['id']}"):
-                nome = st.text_input("Nome", p["nome"], key=f"pn_{p['id']}")
-                inicio = st.date_input("Início", value=pd.to_datetime(p["inicio"]), key=f"pi_{p['id']}")
-                fim = st.date_input("Fim", value=pd.to_datetime(p["fim"]), key=f"pf_{p['id']}")
-                col1, col2 = st.columns(2)
-                if col1.form_submit_button("💾 Salvar"):
-                    st.session_state.periodos = [
-                        {**item, "nome": nome, "inicio": str(inicio), "fim": str(fim)} 
-                        if item["id"] == p["id"] else item
-                        for item in st.session_state.periodos
-                    ]
-                    st.rerun()
-                if col2.form_submit_button("🗑️ Excluir"):
-                    st.session_state.periodos = [
-                        item for item in st.session_state.periodos if item["id"] != p["id"]
-                    ]
-                    st.rerun()
-
-# =================== ABA 8: FERIADOS ===================
-with aba8:
-    st.header("Feriados e Dias Sem Aula")
-    if "feriados" not in st.session_state:
-        st.session_state.feriados = []
-    with st.form("add_feriado"):
-        data = st.date_input("Data")
-        motivo = st.text_input("Motivo")
-        if st.form_submit_button("➕ Adicionar Feriado"):
-            st.session_state.feriados.append({
-                "data": str(data),
-                "motivo": motivo,
-                "id": str(uuid.uuid4())
-            })
-            st.rerun()
-    for f in st.session_state.feriados[:]:
-        with st.expander(f"{f['data']} - {f['motivo']}"):
-            with st.form(f"edit_feriado_{f['id']}"):
-                data = st.date_input("Data", value=pd.to_datetime(f["data"]), key=f"data_{f['id']}")
-                motivo = st.text_input("Motivo", f["motivo"], key=f"motivo_{f['id']}")
-                col1, col2 = st.columns(2)
-                if col1.form_submit_button("💾 Salvar"):
-                    st.session_state.feriados = [
-                        {**item, "data": str(data), "motivo": motivo} 
-                        if item["id"] == f["id"] else item
-                        for item in st.session_state.feriados
-                    ]
-                    st.rerun()
-                if col2.form_submit_button("🗑️ Excluir"):
-                    st.session_state.feriados = [
-                        item for item in st.session_state.feriados if item["id"] != f["id"]
-                    ]
-                    st.rerun()
-
-# =================== ABA 7: CONFIGURAÇÕES ===================
-with aba7:
-    st.header("Configurações Avançadas")
-    st.session_state.relaxar_horario_ideal = st.checkbox(
-        "✅ Relaxar horário ideal (disciplinas pesadas podem ser à tarde)",
-        value=st.session_state.get("relaxar_horario_ideal", False)
-    )
-    st.session_state.max_aulas_professor_dia = st.slider(
-        "Máximo de aulas por professor por dia",
-        min_value=4,
-        max_value=7,
-        value=st.session_state.get("max_aulas_professor_dia", 7)
-    )
-    st.session_state.permitir_janelas = st.checkbox(
-        "Permitir janelas para professores",
-        value=st.session_state.get("permitir_janelas", True)
-    )
-    if st.button("🔍 Analisar Viabilidade"):
-        total_aulas = sum(
-            disc.carga_semanal 
-            for turma in st.session_state.turmas 
-            for disc in st.session_state.disciplinas 
-            if turma.serie in disc.series
-        )
-        capacidade_total = sum(
-            len(prof.disponibilidade_dias) * len(prof.disponibilidade_horarios)
-            for prof in st.session_state.professores
-        )
-        st.metric("Aulas necessárias", total_aulas)
-        st.metric("Capacidade total", capacidade_total)
-        if capacidade_total >= total_aulas:
-            st.success("✅ Capacidade suficiente")
-        else:
-            st.error("⚠️ Capacidade insuficiente")
+    st.header("⚙️ Configurações")
+    if st.button("🗑️ Resetar Tudo (Apagar Banco de Dados)"):
+        import os
+        if os.path.exists("escola.db"):
+            os.remove("escola.db")
+        st.success("✅ Banco de dados apagado. Reinicie a aplicação.")
+        st.rerun()
 
 # =================== ABA 1: INÍCIO ===================
 with aba1:
@@ -322,8 +247,6 @@ with aba1:
                 database.salvar_professores(st.session_state.professores)
                 database.salvar_disciplinas(st.session_state.disciplinas)
                 database.salvar_salas(st.session_state.salas)
-                database.salvar_periodos(st.session_state.periodos)
-                database.salvar_feriados(st.session_state.feriados)
                 if "aulas" in st.session_state:
                     database.salvar_grade(st.session_state.aulas)
                 st.success("✅ Dados salvos!")
@@ -336,8 +259,6 @@ with aba1:
                 st.session_state.professores = database.carregar_professores()
                 st.session_state.disciplinas = database.carregar_disciplinas()
                 st.session_state.salas = database.carregar_salas()
-                st.session_state.periodos = database.carregar_periodos() or []
-                st.session_state.feriados = database.carregar_feriados() or []
                 st.session_state.aulas = database.carregar_grade()
                 st.success("✅ Dados carregados!")
                 st.rerun()
@@ -352,8 +273,7 @@ with aba1:
                 grade = GradeHorariaORTools(
                     st.session_state.turmas,
                     st.session_state.professores,
-                    st.session_state.disciplinas,
-                    relaxar_horario_ideal=st.session_state.relaxar_horario_ideal
+                    st.session_state.disciplinas
                 )
                 aulas = grade.resolver()
                 metodo = "Google OR-Tools"
@@ -406,63 +326,3 @@ with aba1:
             exportar_para_pdf(aulas, pdf_path)
             with open(pdf_path, "rb") as f:
                 st.download_button("📄 PDF", f.read(), "grade.pdf")
-            if st.button("📤 Exportar Grade Completa"):
-                output = io.BytesIO()
-                exportar_grade_por_tipo(aulas, "Grade Completa (Turmas)", output)
-                st.download_button(
-                    "📥 Baixar Grade",
-                    output.getvalue(),
-                    "grade_exportada.xlsx",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-
-# =================== ABA 9: GRADE POR TURMA ===================
-with aba9:
-    st.header("Grade Semanal por Turma")
-    if st.session_state.aulas:
-        aulas = st.session_state.aulas
-        turmas_lista = sorted(list(set(a.turma for a in aulas)))
-        if turmas_lista:
-            turma_selecionada = st.selectbox("Selecione a turma", turmas_lista, key="turma_semanal")
-            for semana in range(1, 6):
-                st.markdown(f"#### Semana {semana}")
-                df = gerar_grade_por_turma_semana(aulas, turma_selecionada, semana)
-                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        else:
-            st.info("Nenhuma turma encontrada.")
-    else:
-        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
-
-# =================== ABA 10: GRADE POR SALA ===================
-with aba10:
-    st.header("Ocupação Semanal por Sala")
-    if st.session_state.aulas:
-        aulas = st.session_state.aulas
-        salas_lista = sorted(list(set(a.sala for a in aulas)))
-        if salas_lista:
-            sala_selecionada = st.selectbox("Selecione a sala", salas_lista, key="sala_semanal")
-            for semana in range(1, 6):
-                st.markdown(f"#### Semana {semana}")
-                df = gerar_grade_por_sala_semana(aulas, sala_selecionada, semana)
-                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        else:
-            st.info("Nenhuma sala encontrada.")
-    else:
-        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
-
-# =================== ABA 11: GRADE POR PROFESSOR ===================
-with aba11:
-    st.header("Grade Semanal por Professor")
-    if st.session_state.aulas:
-        aulas = st.session_state.aulas
-        professores_lista = sorted(list(set(a.professor for a in aulas)))
-        if professores_lista:
-            prof_selecionado = st.selectbox("Selecione o professor", professores_lista, key="prof_semanal")
-            for semana in range(1, 6):
-                st.markdown(f"#### Semana {semana}")
-                df = gerar_grade_por_professor_semana(aulas, prof_selecionado, semana)
-                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        else:
-            st.info("Nenhum professor encontrado.")
-    else:
-        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")

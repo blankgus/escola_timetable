@@ -28,9 +28,9 @@ class Disciplina:
 class Professor:
     nome: str
     disciplinas: List[str]
-    disponibilidade_dias: Set[str]
-    disponibilidade_horarios: Set[int]
-    restricoes: Set[str] = field(default_factory=set)
+    disponibilidade_dias: Set[str]  # Dias disponíveis
+    disponibilidade_horarios: Set[int]  # Horários disponíveis
+    horarios_indisponiveis: Set[str] = field(default_factory=set)  # Ex: {"seg_1", "qua_3"}
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
@@ -38,9 +38,7 @@ class Turma:
     nome: str
     serie: str
     turno: str
-    tipo: str = "regular"  # "pcd", "inclusao", "regular"
     disciplinas_turma: List[DisciplinaTurma] = field(default_factory=list)
-    regras_neuro: List[str] = field(default_factory=list)
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
@@ -58,10 +56,4 @@ class Aula:
     dia: str
     horario: int
     sala: str = "Sala 1"
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-
-@dataclass
-class Feriado:
-    str
-    motivo: str
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
