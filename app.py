@@ -79,107 +79,255 @@ with aba1:
 
 # =================== ABA 2: DISCIPLINAS ===================
 with aba2:
-    st.header("📚 Disciplinas Template")
-    
-    # Adicionar nova disciplina
+    st.header("📚 Disciplinas")
+
+    # --- Formulário para Adicionar Nova Disciplina ---
     with st.form("add_disc"):
         nome = st.text_input("Nome")
-        carga = st.number_input("Carga Semanal", 1, 10, 3)
-        tipo = st.selectbox("Tipo", ["pesada", "media", "leve", "pratica"])
-        series = st.text_input("Séries (separadas por vírgula)", "6ano,7ano,8ano,9ano")
+        # Valores padrão
+        carga = st.number_input("Carga Semanal", min_value=1, max_value=10, value=3)
+        tipo = st.selectbox("Tipo", ["pesada", "media", "leve", "pratica"], index=1) # 'media' como padrão
+
+        # Usar checkboxes para as séries
+        st.subheader("Séries Ofertadas")
+        series_validas = get_series_validas()
+        series_selecionadas = st.multiselect("Selecione as séries", series_validas, default=[])
+
         cor_fundo = st.color_picker("Cor de Fundo", "#4A90E2")
         cor_fonte = st.color_picker("Cor da Fonte", "#FFFFFF")
-        
+
         if st.form_submit_button("➕ Adicionar"):
             if nome:
-                series_list = [s.strip() for s in series.split(",") if s.strip()]
-                nova_disc = Disciplina(
-                    nome=nome,
-                    carga_semanal=carga,
-                    tipo=tipo,
-                    series=series_list,
-                    cor_fundo=cor_fundo,
-                    cor_fonte=cor_fonte
-                )
-                st.session_state.disciplinas.append(nova_disc)
-                st.success(f"✅ Disciplina '{nome}' adicionada!")
-                st.rerun()
-    
-    # Listar disciplinas
+                # Verifica se já existe
+                if any(d.nome.lower() == nome.lower() for d in st.session_state.disciplinas):
+                     st.warning(f"⚠️ Disciplina '{nome}' já existe.")
+                else:
+                    nova_disciplina = Disciplina(
+                        nome=nome,
+                        carga_semanal=carga,
+                        tipo=tipo,
+                        series=series_selecionadas, # Usa a lista de séries selecionadas
+                        cor_fundo=cor_fundo,
+                        cor_fonte=cor_fonte
+                    )
+                    st.session_state.disciplinas.append(nova_disciplina)
+                    st.success(f"✅ Disciplina '{nome}' adicionada!")
+                    st.rerun() # Recarrega para mostrar a nova entrada
+
+    # --- Listagem e Edição de Disciplinas Existentes ---
     if st.session_state.disciplinas:
         st.subheader("📝 Disciplinas Cadastradas")
-        for i, d in enumerate(st.session_state.disciplinas):
-            with st.expander(f"📘 {d.nome}"):
-                st.write(f"**Carga Semanal:** {d.carga_semanal}")
-                st.write(f"**Tipo:** {d.tipo}")
-                st.write(f"**Séries:** {', '.join(d.series)}")
-                st.write(f"**Cor:** {d.cor_fundo}")
-                
-                col1, col2 = st.columns(2)
-                if col1.button("🗑️ Excluir", key=f"del_disc_{i}"):
-                    st.session_state.disciplinas.pop(i)
-                    st.success(f"✅ Disciplina '{d.nome}' excluída!")
-                    st.rerun()
+        # Ordenar por nome para facilitar a visualização
+        disciplinas_ordenadas = sorted(st.session_state.disciplinas, key=lambda d: d.nome.lower())
+
+        for d in disciplinas_ordenadas:
+             with st.expander(f"📘 {d.nome}"):
+                with st.form(f"edit_disc_{d.id}"):
+                    nome_edit = st.text_input("Nome", value=d.nome, key=f"edit_nome_{d.id}")
+                    carga_edit = st.number_input("Carga Semanal", min_value=1, max_value=10, value=d.carga_semanal, key=f"edit_carga_{d.id}")
+                    tipo_edit = st.selectbox("Tipo", ["pesada", "media", "leve", "pratica"], index=["pesada", "media", "leve", "pratica"].index(d.tipo), key=f"edit_tipo_{d.id}")
+
+                    # Checkboxes para editar séries
+                    st.subheader("Séries Ofertadas")
+                    series_validas = get_series_validas()
+                    series_edit = st.multiselect("Selecione as séries", series_validas, default=d.series, key=f"edit_series_{d.id}")
+
+                    cor_fundo_edit = st.color_picker("Cor de Fundo", value=d.cor_fundo, key=f"edit_cor_fundo_{d.id}")
+                    cor_fonte_edit = st.color_picker("Cor da Fonte", value=d.cor_fonte, key=f"edit_cor_fonte_{d.id}")
+
+                    col1, col2 = st.columns(2)
+                    if col1.form_submit_button("💾 Salvar"):
+                        # Atualiza o objeto na lista
+                        d.nome = nome_edit
+                        d.carga_semanal = carga_edit
+                        d.tipo = tipo_edit
+                        d.series = series_edit
+                        d.cor_fundo = cor_fundo_edit
+                        d.cor_fonte = cor_fonte_edit
+                        st.success(f"✅ Disciplina '{nome_edit}' atualizada!")
+                        st.rerun()
+
+                    if col2.form_submit_button("🗑️ Excluir"):
+                        st.session_state.disciplinas = [disc for disc in st.session_state.disciplinas if disc.id != d.id]
+                        st.success(f"🗑️ Disciplina '{d.nome}' excluída!")
+                        st.rerun()
     else:
-        st.info("⚠️ Nenhuma disciplina cadastrada.")
+        st.info("📭 Nenhuma disciplina cadastrada ainda.")
 
 # =================== ABA 3: PROFESSORES ===================
 with aba3:
     st.header("👩‍🏫 Professores")
-    
-    # Adicionar novo professor
-    disc_nomes = [d.nome for d in st.session_state.disciplinas] if st.session_state.disciplinas else ["Nenhuma"]
-    
+
+    # --- Botão para Carregar Professores Padrão do PDF ---
+    if st.button("📥 Carregar Professores Padrão (PDF)"):
+        # Lista de professores com carga horária e apelidos do PDF
+        # Vamos criar uma lista básica com nomes e apelidos
+        professores_padrao = [
+            ("Luciana Aparecida Barbosa da Silva", "Lan", 35), # Assumindo EM por padrão, ajuste se necessário
+            ("Jussara Aparecida Ribeiro", "Ju", 35),
+            ("Juliana Ferreira da Silva", "Ju Ferreira", 35),
+            ("Marisa Aparecida Barbosa da Silva", "Mari", 35),
+            ("Silvana Aparecida Barbosa da Silva", "Sil", 35),
+            ("Rosana Aparecida Barbosa da Silva", "Ro", 35),
+            ("Rosimeire Aparecida Barbosa da Silva", "Rosy", 35),
+            ("Ana Claudia Barbosa da Silva", "Claudi", 35),
+            ("Lucimar Aparecida Barbosa da Silva", "Luci", 35),
+            ("Luciene Aparecida Barbosa da Silva", "Luciene", 35),
+            ("Ana Paula Barbosa da Silva", "Paulinha", 35),
+            ("Marlene Aparecida Barbosa da Silva", "Marlene", 35),
+            ("Simone Aparecida Barbosa da Silva", "Simone", 35),
+            ("Elaine Aparecida Barbosa da Silva", "Elaine", 35),
+            ("Lucineia Aparecida Barbosa da Silva", "Lucineia", 35),
+            ("Fabiana Aparecida Barbosa da Silva", "Fabiana", 35),
+            ("Luciana Ferreira da Silva", "Lu Ferreira", 35),
+            ("Patricia Aparecida Barbosa da Silva", "Paty", 35),
+            ("Marinalva Aparecida Barbosa da Silva", "Marinalva", 35),
+            ("Lucicleide Aparecida Barbosa da Silva", "Lucicleide", 35),
+            ("Lucineide Aparecida Barbosa da Silva", "Lucineide", 35),
+            ("Lucimar Barbosa da Silva", "Lucimar B", 35),
+            ("Luciene Barbosa da Silva", "Luciene B", 35),
+            ("Luciana Barbosa da Silva", "Luciana B", 35),
+            ("Luciene Ferreira da Silva", "Luciene F", 35),
+            ("Luciana Ferreira da Silva", "Luciana F", 35),
+            # Adicione mais conforme necessário ou repita para EF com 25h se for o caso
+        ]
+
+        # Determinar quais disciplinas já existem
+        nomes_disc_existentes = [d.nome for d in st.session_state.disciplinas]
+
+        novos_professores_adicionados = 0
+        for nome_completo, apelido, carga_horaria in professores_padrao:
+            nome_usado = apelido if apelido else nome_completo.split()[0] # Usa apelido ou primeiro nome
+
+            # Verifica se o professor já existe (pelo nome completo ou apelido)
+            if any(p.nome.lower() == nome_completo.lower() or p.nome.lower() == nome_usado.lower() for p in st.session_state.professores):
+                st.warning(f"⚠️ Professor '{nome_usado}' já existe e foi ignorado.")
+                continue
+
+            # Determina disponibilidade com base na carga horária (simplificado)
+            # Para 25h (EF): seg, ter, qua, qui, sex (5 dias) * 5h = 25h -> Vamos assumir horários 1-5
+            # Para 35h (EM): seg, ter, qua, qui, sex (5 dias) * 7h = 35h -> Vamos assumir horários 1-7
+            # Esta lógica pode ser refinada depois.
+            dias_disponiveis = {"seg", "ter", "qua", "qui", "sex"}
+            if carga_horaria == 25:
+                 # Exemplo: 25h pode ser 5 dias * 5 horas (assumindo horários 1-5)
+                 horarios_disponiveis = {1, 2, 3, 5, 6} # Exclui recreio (4) e talvez o último
+            else: # 35h
+                 horarios_disponiveis = {1, 2, 3, 5, 6, 7} # Inclui todos exceto recreio (4)
+
+
+            novo_professor = Professor(
+                nome=nome_usado,
+                disciplinas=[], # Inicialmente sem disciplinas associadas
+                disponibilidade_dias=dias_disponiveis,
+                disponibilidade_horarios=horarios_disponiveis,
+                restricoes=set() # Nenhuma restrição inicial
+            )
+            st.session_state.professores.append(novo_professor)
+            novos_professores_adicionados += 1
+
+        if novos_professores_adicionados > 0:
+            st.success(f"✅ {novos_professores_adicionados} professores padrão carregados!")
+            st.rerun()
+        else:
+             st.info("ℹ️ Nenhum novo professor foi adicionado (todos já existiam).")
+
+
+    # --- Formulário para Adicionar Novo Professor ---
+    disc_nomes = [d.nome for d in st.session_state.disciplinas] if st.session_state.disciplinas else []
     with st.form("add_prof"):
-        nome = st.text_input("Nome")
-        discs = st.multiselect("Disciplinas que pode lecionar", disc_nomes)
-        dias = st.multiselect("Dias disponíveis", ["seg", "ter", "qua", "qui", "sex"], default=["seg", "ter", "qua", "qui", "sex"])
-        horarios = st.multiselect("Horários disponíveis", [1,2,3,4,5,6,7], default=[1,2,3,5,6,7])
-        restricoes = st.text_input("Restrições (ex: seg_1, qua_3)")
-        
+        nome = st.text_input("Nome (ou Apelido)")
+        discs = st.multiselect("Disciplinas que pode lecionar", disc_nomes, default=[])
+
+        st.subheader("Disponibilidade")
+        # Seleção de Dias
+        dias_semana = ["seg", "ter", "qua", "qui", "sex"] # Dias úteis
+        dias_default = ["seg", "ter", "qua", "qui", "sex"] # Todos por padrão
+        dias_disp = st.multiselect("Dias disponíveis", dias_semana, default=dias_default)
+
+        # Seleção de Horários
+        # Supondo horários de 1 a 7
+        horarios_possiveis = list(range(1, 8)) # [1, 2, 3, 4, 5, 6, 7]
+        horarios_default = [1, 2, 3, 5, 6, 7] # Exclui recreio (4) por padrão? Ou inclui todos?
+        horarios_disp = st.multiselect("Horários disponíveis", horarios_possiveis, default=horarios_default)
+
         if st.form_submit_button("➕ Adicionar"):
-            if nome and discs:
-                restricoes_set = set()
-                if restricoes.strip():
-                    restricoes_set = {r.strip() for r in restricoes.split(",")}
-                
-                novo_prof = Professor(
-                    nome=nome,
-                    disciplinas=discs,
-                    disponibilidade_dias=set(dias),
-                    disponibilidade_horarios=set(horarios),
-                    restricoes=restricoes_set
-                )
-                st.session_state.professores.append(novo_prof)
-                st.success(f"✅ Professor '{nome}' adicionado!")
-                st.rerun()
-    
-    # Listar professores
+            if nome:
+                # Verifica se já existe
+                if any(p.nome.lower() == nome.lower() for p in st.session_state.professores):
+                    st.warning(f"⚠️ Professor '{nome}' já existe.")
+                else:
+                    novo_professor = Professor(
+                        nome=nome,
+                        disciplinas=discs,
+                        disponibilidade_dias=set(dias_disp),
+                        disponibilidade_horarios=set(horarios_disp),
+                        restricoes=set() # Inicialmente sem restrições
+                    )
+                    st.session_state.professores.append(novo_professor)
+                    st.success(f"✅ Professor '{nome}' adicionado!")
+                    st.rerun()
+
+    # --- Listagem e Edição de Professores Existentes ---
     if st.session_state.professores:
         st.subheader("👥 Professores Cadastrados")
-        for i, p in enumerate(st.session_state.professores):
-            with st.expander(f"👤 {p.nome}"):
-                st.write(f"**Disciplinas:** {', '.join(p.disciplinas)}")
-                st.write(f"**Dias disponíveis:** {', '.join(sorted(p.disponibilidade_dias))}")
-                st.write(f"**Horários disponíveis:** {sorted(p.disponibilidade_horarios)}")
-                if p.restricoes:
-                    st.write(f"**Restrições:** {', '.join(sorted(p.restricoes))}")
-                
-                col1, col2 = st.columns(2)
-                if col1.button("🗑️ Excluir", key=f"del_prof_{i}"):
-                    st.session_state.professores.pop(i)
-                    st.success(f"✅ Professor '{p.nome}' excluído!")
-                    st.rerun()
-    else:
-        st.info("⚠️ Nenhum professor cadastrado.")
+        # Ordenar por nome para facilitar a visualização
+        professores_ordenados = sorted(st.session_state.professores, key=lambda p: p.nome.lower())
 
+        for p in professores_ordenados:
+            with st.expander(f"👤 {p.nome}"):
+                with st.form(f"edit_prof_{p.id}"):
+                    nome_edit = st.text_input("Nome (ou Apelido)", value=p.nome, key=f"edit_nome_{p.id}")
+                    # Garantir que as disciplinas válidas sejam usadas
+                    disc_nomes = [d.nome for d in st.session_state.disciplinas] if st.session_state.disciplinas else []
+                    discs_validas = [d for d in p.disciplinas if d in disc_nomes]
+                    discs_edit = st.multiselect("Disciplinas que pode lecionar", disc_nomes, default=discs_validas, key=f"edit_discs_{p.id}")
+
+                    st.subheader("Disponibilidade")
+                    dias_semana = ["seg", "ter", "qua", "qui", "sex"]
+                    dias_edit = st.multiselect("Dias disponíveis", dias_semana, default=list(p.disponibilidade_dias), key=f"edit_dias_{p.id}")
+
+                    horarios_possiveis = list(range(1, 8)) # [1, 2, 3, 4, 5, 6, 7]
+                    horarios_edit = st.multiselect("Horários disponíveis", horarios_possiveis, default=list(p.disponibilidade_horarios), key=f"edit_horarios_{p.id}")
+
+                    # Campo para restrições (opcional, avançado)
+                    restricoes_atuais = ", ".join(sorted(p.restricoes)) if p.restricoes else ""
+                    restricoes_input = st.text_input(
+                        "Restrições (opcional, formato: dia_horario, ex: seg_1, qua_3)",
+                        value=restricoes_atuais,
+                        help="Separe múltiplas restrições por vírgula.",
+                        key=f"edit_restricoes_{p.id}"
+                    )
+
+                    col1, col2 = st.columns(2)
+                    if col1.form_submit_button("💾 Salvar"):
+                        # Processa as restrições
+                        novas_restricoes = set()
+                        if restricoes_input.strip():
+                             novas_restricoes = {r.strip().lower() for r in restricoes_input.split(',') if r.strip()}
+
+                        # Atualiza o objeto na lista
+                        p.nome = nome_edit
+                        p.disciplinas = discs_edit
+                        p.disponibilidade_dias = set(dias_edit)
+                        p.disponibilidade_horarios = set(horarios_edit)
+                        p.restricoes = novas_restricoes
+                        st.success(f"✅ Professor '{nome_edit}' atualizado!")
+                        st.rerun()
+
+                    if col2.form_submit_button("🗑️ Excluir"):
+                        st.session_state.professores = [prof for prof in st.session_state.professores if prof.id != p.id]
+                        st.success(f"🗑️ Professor '{p.nome}' excluído!")
+                        st.rerun()
+    else:
+        st.info("📭 Nenhum professor cadastrado ainda. Use o botão 'Carregar Professores Padrão (PDF)' ou adicione manualmente.")
 # =================== ABA 4: TURMAS ===================
 with aba4:
     st.header("🎒 Turmas")
     
     # Adicionar nova turma
     with st.form("add_turma"):
-        nome = st.text_input("Nome (ex: 6anoA)")
+         nome = st.text_input("Nome (ex: 6anoA)")
         serie = st.text_input("Série (ex: 6ano)")
         turno = st.selectbox("Turno", ["manha", "tarde"])
         
