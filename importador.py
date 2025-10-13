@@ -1,27 +1,25 @@
 # importador.py
 import pandas as pd
-from models import Turma, Professor, Disciplina, Sala
+from models import Professor
 
-def carregar_dados_do_excel(caminho):
-    # Ler abas do Excel
-    df_turmas = pd.read_excel(caminho, sheet_name="Turmas")
-    df_professores = pd.read_excel(caminho, sheet_name="Professores")
-    df_disciplinas = pd.read_excel(caminho, sheet_name="Disciplinas")
-    df_salas = pd.read_excel(caminho, sheet_name="Salas")
-
-    turmas = [Turma(row["nome"], row["serie"], row["turno"]) for _, row in df_turmas.iterrows()]
-    professores = [Professor(
-        row["nome"],
-        row["disciplinas"].split(","),
-        set(row["dias_disponiveis"].split(",")),
-        set([int(h) for h in row["horarios_disponiveis"].split(",")])
-    ) for _, row in df_professores.iterrows()]
-    disciplinas = [Disciplina(
-        row["nome"],
-        row["carga_semanal"],
-        row["tipo"],
-        row["series"].split(",")
-    ) for _, row in df_disciplinas.iterrows()]
-    salas = [Sala(row["nome"], row["capacidade"], row["tipo"]) for _, row in df_salas.iterrows()]
-
-    return turmas, professores, disciplinas, salas
+def carregar_professores_do_excel(caminho):
+    # Ler a aba "Professores" do Excel
+    df = pd.read_excel(caminho, sheet_name="Professores")
+    
+    professores = []
+    for _, row in df.iterrows():
+        nome = row["nome"]
+        # Assume que a coluna "disciplinas" tem os nomes separados por vírgula
+        disciplinas_str = row["disciplinas"]
+        disciplinas = [d.strip() for d in disciplinas_str.split(",")]
+        
+        # Criar professor com disponibilidade padrão (todos os dias e horários)
+        prof = Professor(
+            nome=nome,
+            disciplinas=disciplinas,
+            disponibilidade_dias={"seg", "ter", "qua", "qui", "sex"},
+            disponibilidade_horarios={1, 2, 3, 5, 6, 7}
+        )
+        professores.append(prof)
+    
+    return professores
