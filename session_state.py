@@ -22,7 +22,7 @@ def init_session_state():
         # Se banco vazio, tenta carregar do Excel
         if not st.session_state.professores:
             try:
-                st.session_state.professores = carregar_professores_do_excel("professor e disciplina.xlsx")
+                st.session_state.professores = carregar_professores_do_excel("prodis.xlsx")
             except FileNotFoundError:
                 # Se não existir Excel, inicializa com os dados padrão
                 st.session_state.professores = [
