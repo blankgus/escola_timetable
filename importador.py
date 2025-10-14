@@ -4,7 +4,7 @@ from models import Professor
 
 def carregar_professores_do_excel(caminho):
     # Ler a aba "Professores" do Excel
-    df = pd.read_excel(caminho, sheet_name="Professores")
+    df = pd.read_excel(caminho, sheet_name="prodis")
     
     professores = []
     for _, row in df.iterrows():
