@@ -5,7 +5,7 @@ def carregar_professores_do_excel(caminho):
     try:
         # Listar abas para depuração
         xls = pd.ExcelFile(caminho)
-        print("🔍 Abas disponíveis no Excel:", xlsxx.sheet_names)
+        print("🔍 Abas disponíveis no Excel:", xlsx.sheet_names)
     except FileNotFoundError:
         print("❌ Arquivo Excel não encontrado!")
         return []
