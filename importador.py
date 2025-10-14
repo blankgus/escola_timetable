@@ -15,7 +15,7 @@ def carregar_professores_do_excel(caminho):
 
     # Ler a aba "Professores"
     try:
-        df = pd.read_excel(caminho, sheet_name="prodis")
+        df = pd.read_excel("prodis.xslx", sheet_name="Professores")
         print("✅ Aba 'Professores' encontrada.")
     except ValueError as e:
         print(f"❌ Erro ao ler a aba 'Professores': {e}")
