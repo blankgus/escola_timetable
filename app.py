@@ -321,4 +321,188 @@ with aba1:
                 database.salvar_turmas(st.session_state.turmas)
                 database.salvar_professores(st.session_state.professores)
                 database.salvar_disciplinas(st.session_state.disciplinas)
-                database.salvar_salas(st)
+                database.salvar_salas(st.session_state.salas)
+                database.salvar_periodos(st.session_state.get("periodos", []))
+                database.salvar_feriados(st.session_state.get("feriados", []))
+                if "aulas" in st.session_state and st.session_state.aulas:
+                    database.salvar_grade(st.session_state.aulas)
+                st.success("✅ Dados salvos!")
+            except Exception as e:
+                st.error(f"❌ Erro: {str(e)}")
+    with col2:
+        if st.button("🔄 Carregar do Banco"):
+            try:
+                st.session_state.turmas = database.carregar_turmas()
+                st.session_state.professores = database.carregar_professores()
+                st.session_state.disciplinas = database.carregar_disciplinas()
+                st.session_state.salas = database.carregar_salas()
+                st.session_state.periodos = database.carregar_periodos() or []
+                st.session_state.feriados = database.carregar_feriados() or []
+                st.session_state.aulas = database.carregar_grade()
+                st.success("✅ Dados carregados!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Erro: {str(e)}")
+    if not st.session_state.turmas or not st.session_state.professores or not st.session_state.disciplinas:
+        st.warning("⚠️ Cadastre dados antes de gerar grade.")
+        st.stop()
+    if st.button("🚀 Gerar Grade Completa"):
+        with st.spinner("Gerando grade..."):
+            try:
+                grade = GradeHorariaORTools(
+                    st.session_state.turmas,
+                    st.session_state.professores,
+                    st.session_state.disciplinas,
+                    relaxar_horario_ideal=st.session_state.relaxar_horario_ideal
+                )
+                aulas = grade.resolver()
+                metodo = "Google OR-Tools"
+            except Exception as e1:
+                st.warning("⚠️ OR-Tools falhou. Tentando método simples...")
+                try:
+                    simple_grade = SimpleGradeHoraria(
+                        st.session_state.turmas,
+                        st.session_state.professores,
+                        st.session_state.disciplinas
+                    )
+                    aulas = simple_grade.gerar_grade()
+                    metodo = "Algoritmo Simples"
+                except Exception as e2:
+                    st.error(f"❌ Falha total: {str(e2)}")
+                    st.stop()
+            st.session_state.aulas = aulas
+            database.salvar_grade(aulas)
+            st.success(f"✅ Grade gerada com {metodo}!")
+            df = pd.DataFrame([
+                {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala}
+                for a in aulas
+            ])
+            tabela = df.pivot_table(
+                index=["Turma", "Horário"],
+                columns="Dia",
+                values="Disciplina",
+                aggfunc=lambda x: x.iloc[0],
+                fill_value="Sem Aula"
+            ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="Sem Aula")
+            novo_indice = []
+            for turma, horario_num in tabela.index:
+                horario_real = HORARIOS_REAIS.get(horario_num, f"{horario_num}ª aula")
+                novo_indice.append((turma, horario_real))
+            tabela.index = pd.MultiIndex.from_tuples(novo_indice)
+            st.dataframe(tabela.style.applymap(color_disciplina), use_container_width=True)
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                tabela.to_excel(writer, sheet_name="Grade")
+                df.to_excel(writer, sheet_name="Dados", index=False)
+            st.download_button("📥 Excel", output.getvalue(), "grade.xlsx")
+            pdf_path = "grade_horaria.pdf"
+            exportar_para_pdf(aulas, pdf_path)
+            with open(pdf_path, "rb") as f:
+                st.download_button("📄 PDF", f.read(), "grade.pdf")
+            if st.button("📤 Exportar Grade Completa"):
+                output = io.BytesIO()
+                from export import exportar_grade_por_tipo
+                exportar_grade_por_tipo(aulas, "Grade Completa (Turmas)", output)
+                st.download_button(
+                    "📥 Baixar Grade",
+                    output.getvalue(),
+                    "grade_exportada.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )# =================== ABA 1: INÍCIO ===================
+with aba1:
+    st.header("Gerar Grade Horária")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("💾 Salvar no Banco"):
+            try:
+                database.salvar_turmas(st.session_state.turmas)
+                database.salvar_professores(st.session_state.professores)
+                database.salvar_disciplinas(st.session_state.disciplinas)
+                database.salvar_salas(st.session_state.salas)
+                database.salvar_periodos(st.session_state.get("periodos", []))
+                database.salvar_feriados(st.session_state.get("feriados", []))
+                if "aulas" in st.session_state and st.session_state.aulas:
+                    database.salvar_grade(st.session_state.aulas)
+                st.success("✅ Dados salvos!")
+            except Exception as e:
+                st.error(f"❌ Erro: {str(e)}")
+    with col2:
+        if st.button("🔄 Carregar do Banco"):
+            try:
+                st.session_state.turmas = database.carregar_turmas()
+                st.session_state.professores = database.carregar_professores()
+                st.session_state.disciplinas = database.carregar_disciplinas()
+                st.session_state.salas = database.carregar_salas()
+                st.session_state.periodos = database.carregar_periodos() or []
+                st.session_state.feriados = database.carregar_feriados() or []
+                st.session_state.aulas = database.carregar_grade()
+                st.success("✅ Dados carregados!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Erro: {str(e)}")
+    if not st.session_state.turmas or not st.session_state.professores or not st.session_state.disciplinas:
+        st.warning("⚠️ Cadastre dados antes de gerar grade.")
+        st.stop()
+    if st.button("🚀 Gerar Grade Completa"):
+        with st.spinner("Gerando grade..."):
+            try:
+                grade = GradeHorariaORTools(
+                    st.session_state.turmas,
+                    st.session_state.professores,
+                    st.session_state.disciplinas,
+                    relaxar_horario_ideal=st.session_state.relaxar_horario_ideal
+                )
+                aulas = grade.resolver()
+                metodo = "Google OR-Tools"
+            except Exception as e1:
+                st.warning("⚠️ OR-Tools falhou. Tentando método simples...")
+                try:
+                    simple_grade = SimpleGradeHoraria(
+                        st.session_state.turmas,
+                        st.session_state.professores,
+                        st.session_state.disciplinas
+                    )
+                    aulas = simple_grade.gerar_grade()
+                    metodo = "Algoritmo Simples"
+                except Exception as e2:
+                    st.error(f"❌ Falha total: {str(e2)}")
+                    st.stop()
+            st.session_state.aulas = aulas
+            database.salvar_grade(aulas)
+            st.success(f"✅ Grade gerada com {metodo}!")
+            df = pd.DataFrame([
+                {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala}
+                for a in aulas
+            ])
+            tabela = df.pivot_table(
+                index=["Turma", "Horário"],
+                columns="Dia",
+                values="Disciplina",
+                aggfunc=lambda x: x.iloc[0],
+                fill_value="Sem Aula"
+            ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="Sem Aula")
+            novo_indice = []
+            for turma, horario_num in tabela.index:
+                horario_real = HORARIOS_REAIS.get(horario_num, f"{horario_num}ª aula")
+                novo_indice.append((turma, horario_real))
+            tabela.index = pd.MultiIndex.from_tuples(novo_indice)
+            st.dataframe(tabela.style.applymap(color_disciplina), use_container_width=True)
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                tabela.to_excel(writer, sheet_name="Grade")
+                df.to_excel(writer, sheet_name="Dados", index=False)
+            st.download_button("📥 Excel", output.getvalue(), "grade.xlsx")
+            pdf_path = "grade_horaria.pdf"
+            exportar_para_pdf(aulas, pdf_path)
+            with open(pdf_path, "rb") as f:
+                st.download_button("📄 PDF", f.read(), "grade.pdf")
+            if st.button("📤 Exportar Grade Completa"):
+                output = io.BytesIO()
+                from export import exportar_grade_por_tipo
+                exportar_grade_por_tipo(aulas, "Grade Completa (Turmas)", output)
+                st.download_button(
+                    "📥 Baixar Grade",
+                    output.getvalue(),
+                    "grade_exportada.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
