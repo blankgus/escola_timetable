@@ -21,7 +21,7 @@ HORARIOS_REAIS = {
     1: "07:00-07:50",
     2: "07:50-08:40",
     3: "08:40-09:30",
-    4: "09:30-10:00",  # RECREIO
+    4: "09:30-10:00",  # INTERVALO
     5: "10:00-10:50",
     6: "10:50-11:40",
     7: "11:40-12:30"
@@ -41,7 +41,7 @@ def color_disciplina(val):
         for d in st.session_state.disciplinas:
             if d.nome == val:
                 return f'background-color: {d.cor_fundo}; color: {d.cor_fonte}; font-weight: bold'
-    if val == "RECREIO":
+    if val == "INTERVALO":
         return 'background-color: #FFD700; color: black; font-weight: bold; text-align: center'
     if val == "Sem Aula":
         return 'background-color: #F0F0F0; color: #666666; font-style: italic; text-align: center'
@@ -321,142 +321,4 @@ with aba1:
                 database.salvar_turmas(st.session_state.turmas)
                 database.salvar_professores(st.session_state.professores)
                 database.salvar_disciplinas(st.session_state.disciplinas)
-                database.salvar_salas(st.session_state.salas)
-                database.salvar_periodos(st.session_state.get("periodos", []))
-                database.salvar_feriados(st.session_state.get("feriados", []))
-                if "aulas" in st.session_state and st.session_state.aulas:
-                    database.salvar_grade(st.session_state.aulas)
-                st.success("✅ Dados salvos!")
-            except Exception as e:
-                st.error(f"❌ Erro: {str(e)}")
-    with col2:
-        if st.button("🔄 Carregar do Banco"):
-            try:
-                st.session_state.turmas = database.carregar_turmas()
-                st.session_state.professores = database.carregar_professores()
-                st.session_state.disciplinas = database.carregar_disciplinas()
-                st.session_state.salas = database.carregar_salas()
-                st.session_state.periodos = database.carregar_periodos() or []
-                st.session_state.feriados = database.carregar_feriados() or []
-                st.session_state.aulas = database.carregar_grade()
-                st.success("✅ Dados carregados!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"❌ Erro: {str(e)}")
-    if not st.session_state.turmas or not st.session_state.professores or not st.session_state.disciplinas:
-        st.warning("⚠️ Cadastre dados antes de gerar grade.")
-        st.stop()
-    if st.button("🚀 Gerar Grade Completa"):
-        with st.spinner("Gerando grade..."):
-            try:
-                grade = GradeHorariaORTools(
-                    st.session_state.turmas,
-                    st.session_state.professores,
-                    st.session_state.disciplinas,
-                    relaxar_horario_ideal=st.session_state.relaxar_horario_ideal
-                )
-                aulas = grade.resolver()
-                metodo = "Google OR-Tools"
-            except Exception as e1:
-                st.warning("⚠️ OR-Tools falhou. Tentando método simples...")
-                try:
-                    simple_grade = SimpleGradeHoraria(
-                        st.session_state.turmas,
-                        st.session_state.professores,
-                        st.session_state.disciplinas
-                    )
-                    aulas = simple_grade.gerar_grade()
-                    metodo = "Algoritmo Simples"
-                except Exception as e2:
-                    st.error(f"❌ Falha total: {str(e2)}")
-                    st.stop()
-            st.session_state.aulas = aulas
-            database.salvar_grade(aulas)
-            st.success(f"✅ Grade gerada com {metodo}!")
-            df = pd.DataFrame([
-                {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala}
-                for a in aulas
-            ])
-            tabela = df.pivot_table(
-                index=["Turma", "Horário"],
-                columns="Dia",
-                values="Disciplina",
-                aggfunc=lambda x: x.iloc[0],
-                fill_value="Sem Aula"
-            ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="Sem Aula")
-            novo_indice = []
-            for turma, horario_num in tabela.index:
-                horario_real = HORARIOS_REAIS.get(horario_num, f"{horario_num}ª aula")
-                novo_indice.append((turma, horario_real))
-            tabela.index = pd.MultiIndex.from_tuples(novo_indice)
-            st.dataframe(tabela.style.applymap(color_disciplina), use_container_width=True)
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                tabela.to_excel(writer, sheet_name="Grade")
-                df.to_excel(writer, sheet_name="Dados", index=False)
-            st.download_button("📥 Excel", output.getvalue(), "grade.xlsx")
-            pdf_path = "grade_horaria.pdf"
-            exportar_para_pdf(aulas, pdf_path)
-            with open(pdf_path, "rb") as f:
-                st.download_button("📄 PDF", f.read(), "grade.pdf")
-            if st.button("📤 Exportar Grade Completa"):
-                output = io.BytesIO()
-                from export import exportar_grade_por_tipo
-                exportar_grade_por_tipo(aulas, "Grade Completa (Turmas)", output)
-                st.download_button(
-                    "📥 Baixar Grade",
-                    output.getvalue(),
-                    "grade_exportada.xlsx",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-
-# =================== ABA 9: GRADE POR TURMA ===================
-with aba9:
-    st.header("Grade Semanal por Turma")
-    if st.session_state.aulas:
-        aulas = st.session_state.aulas
-        turmas_lista = sorted(list(set(a.turma for a in aulas)))
-        if turmas_lista:
-            turma_selecionada = st.selectbox("Selecione a turma", turmas_lista, key="turma_semanal")
-            for semana in range(1, 6):
-                st.markdown(f"#### Semana {semana}")
-                df = gerar_grade_por_turma_semana(aulas, turma_selecionada, semana)
-                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        else:
-            st.info("Nenhuma turma encontrada.")
-    else:
-        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
-
-# =================== ABA 10: GRADE POR SALA ===================
-with aba10:
-    st.header("Ocupação Semanal por Sala")
-    if st.session_state.aulas:
-        aulas = st.session_state.aulas
-        salas_lista = sorted(list(set(a.sala for a in aulas)))
-        if salas_lista:
-            sala_selecionada = st.selectbox("Selecione a sala", salas_lista, key="sala_semanal")
-            for semana in range(1, 6):
-                st.markdown(f"#### Semana {semana}")
-                df = gerar_grade_por_sala_semana(aulas, sala_selecionada, semana)
-                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        else:
-            st.info("Nenhuma sala encontrada.")
-    else:
-        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
-
-# =================== ABA 11: GRADE POR PROFESSOR ===================
-with aba11:
-    st.header("Grade Semanal por Professor")
-    if st.session_state.aulas:
-        aulas = st.session_state.aulas
-        professores_lista = sorted(list(set(a.professor for a in aulas)))
-        if professores_lista:
-            prof_selecionado = st.selectbox("Selecione o professor", professores_lista, key="prof_semanal")
-            for semana in range(1, 6):
-                st.markdown(f"#### Semana {semana}")
-                df = gerar_grade_por_professor_semana(aulas, prof_selecionado, semana)
-                st.dataframe(df.style.applymap(color_disciplina), use_container_width=True)
-        else:
-            st.info("Nenhum professor encontrado.")
-    else:
-        st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
+                database.salvar_salas(st
