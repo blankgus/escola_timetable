@@ -87,14 +87,14 @@ def gerar_grade_por_turma_semana(aulas, turma_nome, semana=1):
             if aula.turma == turma_nome and aula.dia in dias and aula.horario in horarios:
                 grade[aula.horario][aula.dia] = aula.disciplina
         for d in dias:
-            grade[3][d] = "INTERVALO"
+            grade[4][d] = "INTERVALO" # INTERVALO no horário 4
         HORARIOS_REAIS = {
             1: "07:50-08:40",
             2: "08:40-09:30",
-            3: "09:30-09:50",
-            4: "09:50-10:40",
-            5: "10:40-11:30",
-            6: "11:30-12:20"
+            3: "09:30-10:00",
+            4: "10:00-10:50",
+            5: "10:50-11:40",
+            6: "11:40-12:30"
         }
     else:
         horarios = [1, 2, 3, 4, 5, 6, 7]
@@ -103,15 +103,15 @@ def gerar_grade_por_turma_semana(aulas, turma_nome, semana=1):
             if aula.turma == turma_nome and aula.dia in dias and aula.horario in horarios:
                 grade[aula.horario][aula.dia] = aula.disciplina
         for d in dias:
-            grade[4][d] = "INTERVALO"
+            grade[4][d] = "INTERVALO" # INTERVALO no horário 4
         HORARIOS_REAIS = {
             1: "07:00-07:50",
             2: "07:50-08:40",
             3: "08:40-09:30",
-            4: "09:30-09:50",
-            5: "09:50-10:40",
-            6: "10:40-11:30",
-            7: "11:30-12:20"
+            4: "09:30-10:00",
+            5: "10:00-10:50",
+            6: "10:50-11:40",
+            7: "11:40-12:30"
         }
     df = pd.DataFrame(grade).T
     df.index.name = "Horário"
@@ -126,17 +126,17 @@ def gerar_grade_por_sala_semana(aulas, sala_nome, semana=1):
         if aula.sala == sala_nome and aula.dia in dias and aula.horario in horarios:
             grade[aula.horario][aula.dia] = aula.disciplina
     for d in dias:
-        grade[4][d] = "INTERVALO"
+        grade[4][d] = "INTERVALO" # INTERVALO no horário 4
     df = pd.DataFrame(grade).T
     df.index.name = "Horário"
     HORARIOS_REAIS = {
         1: "07:00-07:50",
         2: "07:50-08:40",
         3: "08:40-09:30",
-        4: "09:30-09:50",
-        5: "09:50-10:40",
-        6: "10:40-11:30",
-        7: "11:30-12:20"
+        4: "09:30-10:00",
+        5: "10:00-10:50",
+        6: "10:50-11:40",
+        7: "11:40-12:30"
     }
     df.index = [HORARIOS_REAIS.get(h, str(h)) for h in df.index]
     return df
@@ -149,17 +149,17 @@ def gerar_grade_por_professor_semana(aulas, professor_nome, semana=1):
         if aula.professor == professor_nome and aula.dia in dias and aula.horario in horarios:
             grade[aula.horario][aula.dia] = f"{aula.disciplina}\n{aula.turma}"
     for d in dias:
-        grade[4][d] = "INTERVALO"
+        grade[4][d] = "INTERVALO" # INTERVALO no horário 4
     df = pd.DataFrame(grade).T
     df.index.name = "Horário"
     HORARIOS_REAIS = {
         1: "07:00-07:50",
         2: "07:50-08:40",
         3: "08:40-09:30",
-        4: "09:30-09:50",
-        5: "09:50-10:40",
-        6: "10:40-11:30",
-        7: "11:30-12:20"
+        4: "09:30-10:00",
+        5: "10:00-10:50",
+        6: "10:50-11:40",
+        7: "11:40-12:30"
     }
     df.index = [HORARIOS_REAIS.get(h, str(h)) for h in df.index]
     return df
