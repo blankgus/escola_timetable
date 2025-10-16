@@ -21,26 +21,53 @@ def init_session_state():
             Turma("2emB", "2em", "manha"),
             Turma("3emA", "3em", "manha"),
             Turma("3emB", "3em", "manha"),
-         ]
+        ]
     if "professores" not in st.session_state:
         st.session_state.professores = database.carregar_professores() or [
             Professor("Heliana", ["Português"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
             Professor("Deise", ["Português"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
-            # ... adicione mais professores conforme necessário ...
+            Professor("Loide", ["Português"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Tatiane", ["Matemática"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Ricardo", ["Matemática"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Laís", ["História"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Waldemar", ["História"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Rene", ["Geografia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Vladmir", ["Química"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Zabuor", ["Química"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Gisele", ["Geografia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Marina", ["Biologia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("César", ["Informática/Física"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Anna Maria", ["Filosofia/Sociologia"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Marcão", ["Educação Física"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Andréia", ["Educação Física"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Vanessa", ["Arte"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
+            Professor("Andréia Barreto", ["Dinâmica/Vida Pratica"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
         ]
     if "disciplinas" not in st.session_state:
         st.session_state.disciplinas = database.carregar_disciplinas() or [
-            Disciplina("Português A", 4, "pesada", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA, "2emA, "3emA"], "#D32000", "#FFFFFF"),
-            Disciplina("Português B", 4, "pesada", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "#D35400", "#FFFFFF"),
-            Disciplina("Matemática A", 4, "pesada", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA, "2emA, "3emA"], "#D32000", "#FFFFFF"),
-            Disciplina("Matemática B", 4, "pesada", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "#D35400", "#FFFFFF"),
-            Disciplina("História A", 4, "media", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA, "2emA, "3emA"], "#D32000", "#FFFFFF"),
-            Disciplina("História B", 4, "media", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "#D35400", "#FFFFFF"),
-            
+            Disciplina("Português", 4, "pesada", ["6ano", "7ano", "8ano", "9ano"], "#D35400", "#FFFFFF"),
             Disciplina("Matemática", 4, "pesada", ["6ano", "7ano", "8ano", "9ano"], "#4A90E2", "#FFFFFF"),
-
+            Disciplina("Ciências", 3, "media", ["6ano", "7ano", "8ano"], "#1ABC9C", "#000000"),
+            Disciplina("História", 3, "media", ["6ano", "7ano", "8ano", "9ano"], "#C0392B", "#FFFFFF"),
+            Disciplina("Geografia", 2, "media", ["6ano", "7ano", "8ano", "9ano"], "#F39C12", "#000000"),
+            Disciplina("Inglês", 2, "media", ["6ano", "7ano", "8ano", "9ano"], "#2C3E50", "#FFFFFF"),
+            Disciplina("Artes", 2, "leve", ["6ano", "7ano", "8ano", "9ano"], "#E67E22", "#FFFFFF"),
+            Disciplina("Educação Física", 2, "pratica", ["6ano", "7ano", "8ano", "9ano"], "#2ECC71", "#000000"),
+            Disciplina("Ensino Religioso", 1, "leve", ["6ano", "7ano", "8ano", "9ano"], "#9B59B6", "#FFFFFF"),
             
-            # ... adicione mais disciplinas conforme necessário ...
+            # Ensino Médio
+            Disciplina("Matemática", 5, "pesada", ["1em", "2em", "3em"], "#4A90E2", "#FFFFFF"),
+            Disciplina("Português", 5, "pesada", ["1em", "2em", "3em"], "#D35400", "#FFFFFF"),
+            Disciplina("Biologia", 3, "media", ["1em", "2em"], "#27AE60", "#FFFFFF"),
+            Disciplina("Física", 3, "pesada", ["2em", "3em"], "#8E44AD", "#FFFFFF"),
+            Disciplina("Química", 3, "pesada", ["1em", "2em", "3em"], "#2980B9", "#FFFFFF"),
+            Disciplina("História", 3, "media", ["1em", "2em", "3em"], "#C0392B", "#FFFFFF"),
+            Disciplina("Geografia", 2, "media", ["1em"], "#F39C12", "#000000"),
+            Disciplina("Inglês", 3, "media", ["1em", "2em", "3em"], "#2C3E50", "#FFFFFF"),
+            Disciplina("Artes", 1, "leve", ["1em", "2em", "3em"], "#E67E22", "#FFFFFF"),
+            Disciplina("Educação Física", 2, "pratica", ["1em", "2em", "3em"], "#2ECC71", "#000000"),
+            Disciplina("Filosofia", 2, "leve", ["1em", "2em", "3em"], "#9B59B6", "#FFFFFF"),
+            Disciplina("Sociologia", 2, "leve", ["2em", "3em"], "#16A085", "#FFFFFF"),
         ]
     if "salas" not in st.session_state:
         st.session_state.salas = database.carregar_salas() or [
@@ -52,5 +79,10 @@ def init_session_state():
             Sala("Sala 6", 30, "normal"),
             Sala("Sala 7", 30, "normal"),
             Sala("Sala 8", 30, "normal"),
-            # ... adicione mais salas conforme necessário ...
+            Sala("Sala 9", 30, "normal"),
+            Sala("Sala 10", 30, "normal"),
+            Sala("Sala 11", 30, "normal"),
+            Sala("Sala 12", 30, "normal"),
+            Sala("Laboratório de Ciências", 25, "laboratório"),
+            Sala("Auditório", 100, "auditório"),
         ]
