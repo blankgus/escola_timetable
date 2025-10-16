@@ -10,9 +10,6 @@ from scheduler_ortools import GradeHorariaORTools
 from export import (
     exportar_para_excel,
     exportar_para_pdf,
-    gerar_relatorio_professor,
-    gerar_relatorio_todos_professores,
-    gerar_relatorio_disciplina_sala,
     gerar_grade_por_turma_semana,
     gerar_grade_por_sala_semana,
     gerar_grade_por_professor_semana,
@@ -246,45 +243,6 @@ with aba6:
                         item for item in st.session_state.periodos if item.id != p["id"]
                     ]
                     st.rerun()
-
-# =================== NOVA ABA: VERIFICAR CARGA POR TURMA ===================
-with st.sidebar: # Ou dentro das suas abas principais
-    st.header("📊 Verificar Carga por Turma")
-    if st.button("🔍 Analisar Carga das Turmas"):
-        if not st.session_state.disciplinas:
-            st.warning("⚠️ Nenhuma disciplina cadastrada.")
-        else:
-            turmas_lista = [t.nome for t in st.session_state.turmas]
-            if turmas_lista:
-                resultados = []
-                for turma_nome in turmas_lista:
-                    # Encontrar a turma pelo nome
-                    turma_obj = next((t for t in st.session_state.turmas if t.nome == turma_nome), None)
-                    if not turma_obj:
-                        continue
-                    
-                    # Contar quantas aulas essa turma tem (se já foi gerada)
-                    aulas_da_turma = [a for a in st.session_state.get("aulas", []) if a.turma == turma_nome]
-                    carga_real = len(aulas_da_turma)
-
-                    # Determinar carga esperada (ex: 25 para EF, 30 para EM)
-                    carga_esperada = 25
-                    if turma_obj.serie in ["1em", "2em", "3em"]:
-                        carga_esperada = 30 # Exemplo para Ensino Médio
-
-                    status = "✅ OK" if carga_real == carga_esperada else "⚠️ Incorreto"
-                    resultados.append({
-                        "Turma": turma_nome,
-                        "Série": turma_obj.serie,
-                        "Carga Real": carga_real,
-                        "Carga Esperada": carga_esperada,
-                        "Status": status
-                    })
-                
-                df_resultados = pd.DataFrame(resultados)
-                st.dataframe(df_resultados, use_container_width=True)
-            else:
-                st.warning("⚠️ Nenhuma turma cadastrada.")
 
 # =================== ABA 8: FERIADOS ===================
 with aba8:
