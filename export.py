@@ -1,94 +1,208 @@
 # export.py
 import pandas as pd
-# from fpdf import FPDF # Se for usar PDF
+from fpdf import FPDF
 
-# --- Funções existentes (mantidas) ---
-# ... (cole aqui suas funções exportar_para_excel, exportar_para_pdf, etc.) ...
-
-# --- NOVA FUNÇÃO ---
-def gerar_relatorio_professor(professor_nome: str, aulas: list, dia_semana: str = "sex") -> pd.DataFrame:
-    """
-    Gera um DataFrame representando o horário de um professor em um dia específico.
-
-    Args:
-        professor_nome: Nome do professor.
-        aulas: Lista completa de aulas geradas.
-        dia_semana: Dia da semana ('seg', 'ter', 'qua', 'qui', 'sex'). Default 'sex'.
-
-    Returns:
-        pd.DataFrame: Tabela com horários nas linhas e status nas colunas.
-    """
-    # Definir os horários do dia (ex: 1 a 8, ajuste conforme sua necessidade)
-    horarios_do_dia = list(range(1, 9)) # De 1 a 8
-
-    # Dicionário para armazenar o que o professor faz em cada horário
-    agenda_do_dia = {}
-
-    # Definir eventos fixos (exemplo)
-    EVENTOS_FIXOS = {4: "Intervalo"} # Intervalo no horário 4
-
-    for h in horarios_do_dia:
-        # Verificar eventos fixos primeiro
-        if h in EVENTOS_FIXOS:
-            agenda_do_dia[h] = EVENTOS_FIXOS[h]
-        else:
-            # Procurar aula do professor nesse horário e dia
-            aula_do_professor = next(
-                (a for a in aulas if a.professor == professor_nome and a.dia == dia_semana and a.horario == h),
-                None
-            )
-            if aula_do_professor:
-                # Aqui pode-se adicionar lógica para identificar "Inglês do Integral" etc.
-                # Por enquanto, mostra Turma - Disciplina
-                # Se quiser diferenciar "Integral", pode usar o nome da turma ou disciplina
-                if "Integral" in aula_do_professor.turma or "integral" in aula_do_professor.disciplina.lower():
-                     agenda_do_dia[h] = f"{aula_do_professor.turma} - {aula_do_professor.disciplina}"
-                else:
-                     agenda_do_dia[h] = f"{aula_do_professor.turma} - {aula_do_professor.disciplina}"
-            else:
-                agenda_do_dia[h] = "Livre" # Ou "Disponível"
-
-    # Criar DataFrame
-    df_agenda = pd.DataFrame.from_dict(agenda_do_dia, orient='index', columns=[dia_semana.capitalize()])
-    df_agenda.index.name = "Horário"
-    # Mapear números dos horários para os horários reais (ajuste conforme sua necessidade)
-    MAPA_HORARIOS = {
-        1: "07:10-08:00",
-        2: "08:00-08:50",
-        3: "08:50-09:40",
-        4: "09:40-10:00", # Intervalo
-        5: "10:00-10:50",
-        6: "10:50-11:40",
-        7: "11:40-12:30",
-        8: "12:30-13:20"
-        # Adicione mais se necessário
+def exportar_para_excel(aulas, caminho="grade_horaria.xlsx"):
+    """Exporta a grade completa para um arquivo Excel."""
+    df = pd.DataFrame([
+        {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala}
+        for a in aulas
+    ])
+    HORARIOS_REAIS = {
+        1: "07:00-07:50",
+        2: "07:50-08:40",
+        3: "08:40-09:30",
+        4: "09:30-09:50", # INTERVALO
+        5: "09:50-10:40",
+        6: "10:40-11:30",
+        7: "11:30-12:20",
+        8: "12:20-13:10"
     }
-    df_agenda.index = df_agenda.index.map(MAPA_HORARIOS).fillna("Horário Inválido")
+    df["Horário"] = df["Horário"].map(HORARIOS_REAIS).fillna("Horário Inválido")
+    tabela = df.pivot_table(
+        index=["Turma", "Horário"],
+        columns="Dia",
+        values="Disciplina",
+        aggfunc=lambda x: x.iloc[0],
+        fill_value=""
+    ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="")
+    with pd.ExcelWriter(caminho, engine='openpyxl') as writer:
+        tabela.to_excel(writer, sheet_name="Grade")
+        df.to_excel(writer, sheet_name="Dados Brutos", index=False)
 
-    return df_agenda
+def exportar_para_pdf(aulas, caminho="grade_horaria.pdf"):
+    """Exporta a grade completa para um arquivo PDF."""
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="Grade Horária Escolar", ln=True, align='C')
+    pdf.ln(10)
+    from collections import defaultdict
+    turmas_aulas = defaultdict(list)
+    for aula in aulas:
+        turmas_aulas[aula.turma].append(aula)
+    HORARIOS_REAIS = {
+        1: "07:00-07:50",
+        2: "07:50-08:40",
+        3: "08:40-09:30",
+        4: "09:30-09:50", # INTERVALO
+        5: "09:50-10:40",
+        6: "10:40-11:30",
+        7: "11:30-12:20",
+        8: "12:20-13:10"
+    }
+    for turma in sorted(turmas_aulas.keys()):
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(0, 10, txt=f"Turma: {turma}", ln=True)
+        pdf.set_font("Arial", size=10)
+        aulas_ordenadas = sorted(turmas_aulas[turma], key=lambda x: (x.dia, x.horario))
+        for aula in aulas_ordenadas:
+            pdf.cell(0, 8, txt=f"{HORARIOS_REAIS.get(aula.horario, str(aula.horario))} - {aula.dia.upper()}: {aula.disciplina} ({aula.professor})", ln=True)
+        pdf.ln(5)
+    pdf.output(caminho)
 
+def gerar_relatorio_professor(professor_nome, aulas):
+    return pd.DataFrame([{"Professor": professor_nome, "Total Aulas": len([a for a in aulas if a.professor == professor_nome])}])
 
-# --- Função auxiliar para PDF (exemplo usando fpdf) ---
-# def exportar_relatorio_para_pdf(df_relatorio: pd.DataFrame, professor_nome: str, dia_semana: str) -> bytes:
-#     """
-#     Exporta o DataFrame do relatório do professor para bytes de um PDF.
-#     Requer a biblioteca fpdf.
-#     """
-#     pdf_buffer = io.BytesIO()
-#     pdf = FPDF()
-#     pdf.add_page()
-#     pdf.set_font("Arial", size=12)
-#     pdf.cell(200, 10, txt=f"Horário de {professor_nome} - {dia_semana.capitalize()}-Feira", ln=True, align='C')
-#     pdf.ln(10)
+def gerar_relatorio_todos_professores(aulas):
+    return pd.DataFrame([
+        {"Professor": p, "Total Aulas": c} 
+        for p, c in pd.Series([a.professor for a in aulas]).value_counts().items()
+    ])
 
-#     # Itera pelas linhas do DataFrame e adiciona ao PDF
-#     for index, row in df_relatorio.iterrows():
-#         pdf.cell(0, 10, txt=f"{index}: {row[dia_semana.capitalize()]}", ln=True)
+def gerar_relatorio_disciplina_sala(aulas):
+    return pd.DataFrame([
+        {"Disciplina": a.disciplina, "Sala": a.sala, "Quantidade": 1} 
+        for a in aulas
+    ]).groupby(["Disciplina", "Sala"]).sum().reset_index()
 
-#     pdf.output(pdf_buffer)
-#     pdf_buffer.seek(0) # Volta para o início do buffer
-#     return pdf_buffer.getvalue()
+def gerar_grade_por_turma_semana(aulas, turma_nome, semana=1):
+    is_fundamental = any(s in turma_nome for s in ["6ano", "7ano", "8ano", "9ano"])
+    dias = ["seg", "ter", "qua", "qui", "sex"]
+    if is_fundamental:
+        horarios = [1, 2, 3, 4, 5, 6]
+        grade = {h: {d: "Sem Aula" for d in dias} for h in horarios}
+        for aula in aulas:
+            if aula.turma == turma_nome and aula.dia in dias and aula.horario in horarios:
+                grade[aula.horario][aula.dia] = aula.disciplina
+        for d in dias:
+            grade[3][d] = "INTERVALO"
+        HORARIOS_REAIS = {
+            1: "07:50-08:40",
+            2: "08:40-09:30",
+            3: "09:30-09:50",
+            4: "09:50-10:40",
+            5: "10:40-11:30",
+            6: "11:30-12:20"
+        }
+    else:
+        horarios = [1, 2, 3, 4, 5, 6, 7]
+        grade = {h: {d: "Sem Aula" for d in dias} for h in horarios}
+        for aula in aulas:
+            if aula.turma == turma_nome and aula.dia in dias and aula.horario in horarios:
+                grade[aula.horario][aula.dia] = aula.disciplina
+        for d in dias:
+            grade[4][d] = "INTERVALO"
+        HORARIOS_REAIS = {
+            1: "07:00-07:50",
+            2: "07:50-08:40",
+            3: "08:40-09:30",
+            4: "09:30-09:50",
+            5: "09:50-10:40",
+            6: "10:40-11:30",
+            7: "11:30-12:20"
+        }
+    df = pd.DataFrame(grade).T
+    df.index.name = "Horário"
+    df.index = [HORARIOS_REAIS.get(h, str(h)) for h in df.index]
+    return df
 
+def gerar_grade_por_sala_semana(aulas, sala_nome, semana=1):
+    dias = ["seg", "ter", "qua", "qui", "sex"]
+    horarios = [1, 2, 3, 4, 5, 6, 7]
+    grade = {h: {d: "Sem Aula" for d in dias} for h in horarios}
+    for aula in aulas:
+        if aula.sala == sala_nome and aula.dia in dias and aula.horario in horarios:
+            grade[aula.horario][aula.dia] = aula.disciplina
+    for d in dias:
+        grade[4][d] = "INTERVALO"
+    df = pd.DataFrame(grade).T
+    df.index.name = "Horário"
+    HORARIOS_REAIS = {
+        1: "07:00-07:50",
+        2: "07:50-08:40",
+        3: "08:40-09:30",
+        4: "09:30-09:50",
+        5: "09:50-10:40",
+        6: "10:40-11:30",
+        7: "11:30-12:20"
+    }
+    df.index = [HORARIOS_REAIS.get(h, str(h)) for h in df.index]
+    return df
 
-# Se você tiver outras funções de exportação, mantenha-as aqui também.
-# ... (restante do seu export.py existente) ...
+def gerar_grade_por_professor_semana(aulas, professor_nome, semana=1):
+    dias = ["seg", "ter", "qua", "qui", "sex"]
+    horarios = [1, 2, 3, 4, 5, 6, 7]
+    grade = {h: {d: "Sem Aula" for d in dias} for h in horarios}
+    for aula in aulas:
+        if aula.professor == professor_nome and aula.dia in dias and aula.horario in horarios:
+            grade[aula.horario][aula.dia] = f"{aula.disciplina}\n{aula.turma}"
+    for d in dias:
+        grade[4][d] = "INTERVALO"
+    df = pd.DataFrame(grade).T
+    df.index.name = "Horário"
+    HORARIOS_REAIS = {
+        1: "07:00-07:50",
+        2: "07:50-08:40",
+        3: "08:40-09:30",
+        4: "09:30-09:50",
+        5: "09:50-10:40",
+        6: "10:40-11:30",
+        7: "11:30-12:20"
+    }
+    df.index = [HORARIOS_REAIS.get(h, str(h)) for h in df.index]
+    return df
+
+def exportar_grade_por_tipo(aulas, tipo_grade, caminho="grade_exportada.xlsx"):
+    with pd.ExcelWriter(caminho, engine='openpyxl') as writer:
+        if tipo_grade == "Grade Completa (Turmas)":
+            df = pd.DataFrame([
+                {"Turma": a.turma, "Disciplina": a.disciplina, "Professor": a.professor, "Dia": a.dia, "Horário": a.horario, "Sala": a.sala}
+                for a in aulas
+            ])
+            tabela = df.pivot_table(
+                index=["Turma", "Horário"],
+                columns="Dia",
+                values="Disciplina",
+                aggfunc=lambda x: x.iloc[0],
+                fill_value=""
+            ).reindex(columns=["dom", "seg", "ter", "qua", "qui", "sex", "sab"], fill_value="")
+            novo_indice = []
+            for turma, horario_num in tabela.index:
+                horario_real = HORARIOS_REAIS.get(horario_num, f"{horario_num}ª aula")
+                novo_indice.append((turma, horario_real))
+            tabela.index = pd.MultiIndex.from_tuples(novo_indice)
+            tabela.to_excel(writer, sheet_name="Grade por Turma")
+            df.to_excel(writer, sheet_name="Dados Brutos", index=False)
+        elif tipo_grade == "Grade por Turma":
+            turmas_lista = sorted(list(set(a.turma for a in aulas)))
+            for turma in turmas_lista:
+                for semana in range(1, 6):
+                    df = gerar_grade_por_turma_semana(aulas, turma, semana)
+                    nome_aba = f"Turma_{turma}_Sem{semana}"[:31]
+                    df.to_excel(writer, sheet_name=nome_aba)
+        elif tipo_grade == "Grade por Sala":
+            salas_lista = sorted(list(set(a.sala for a in aulas)))
+            for sala in salas_lista:
+                for semana in range(1, 6):
+                    df = gerar_grade_por_sala_semana(aulas, sala, semana)
+                    nome_aba = f"Sala_{sala}_Sem{semana}"[:31]
+                    df.to_excel(writer, sheet_name=nome_aba)
+        elif tipo_grade == "Grade por Professor":
+            professores_lista = sorted(list(set(a.professor for a in aulas)))
+            for prof in professores_lista:
+                for semana in range(1, 6):
+                    df = gerar_grade_por_professor_semana(aulas, prof, semana)
+                    nome_aba = f"Prof_{prof}_Sem{semana}"[:31]
+                    df.to_excel(writer, sheet_name=nome_aba)
