@@ -30,13 +30,27 @@ def init_session_state():
         ]
     if "disciplinas" not in st.session_state:
         st.session_state.disciplinas = database.carregar_disciplinas() or [
-            Disciplina("Português", 4, "pesada", ["6ano", "7ano", "8ano", "9ano"], "#D35400", "#FFFFFF"),
+            Disciplina("Português A", 4, "pesada", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA, "2emA, "3emA"], "#D32000", "#FFFFFF"),
+            Disciplina("Português B", 4, "pesada", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "#D35400", "#FFFFFF"),
+            Disciplina("Matemática A", 4, "pesada", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA, "2emA, "3emA"], "#D32000", "#FFFFFF"),
+            Disciplina("Matemática B", 4, "pesada", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "#D35400", "#FFFFFF"),
+            Disciplina("História A", 4, "media", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA, "2emA, "3emA"], "#D32000", "#FFFFFF"),
+            Disciplina("História B", 4, "media", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "#D35400", "#FFFFFF"),
+            
             Disciplina("Matemática", 4, "pesada", ["6ano", "7ano", "8ano", "9ano"], "#4A90E2", "#FFFFFF"),
+
+            
             # ... adicione mais disciplinas conforme necessário ...
         ]
     if "salas" not in st.session_state:
         st.session_state.salas = database.carregar_salas() or [
             Sala("Sala 1", 30, "normal"),
             Sala("Sala 2", 30, "normal"),
+            Sala("Sala 3", 30, "normal"),
+            Sala("Sala 4", 30, "normal"),
+            Sala("Sala 5", 30, "normal"),
+            Sala("Sala 6", 30, "normal"),
+            Sala("Sala 7", 30, "normal"),
+            Sala("Sala 8", 30, "normal"),
             # ... adicione mais salas conforme necessário ...
         ]
