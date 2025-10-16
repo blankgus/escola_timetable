@@ -1,3 +1,4 @@
+# app.py
 import streamlit as st
 import json
 import pandas as pd
@@ -25,11 +26,10 @@ HORARIOS_REAIS = {
     1: "07:00-07:50",
     2: "07:50-08:40",
     3: "08:40-09:30",
-    4: "09:30-09:50", # INTERVALO
-    5: "09:50-10:40",
-    6: "10:40-11:30",
-    7: "11:30-12:20",
-    8: "12:20-13:10"
+    4: "09:30-10:00", # INTERVALO
+    5: "10:00-10:50",
+    6: "10:50-11:40",
+    7: "11:40-12:30"
 }
 
 try:
@@ -102,64 +102,14 @@ with aba2:
                     st.rerun()
 
 # =================== ABA 3: PROFESSORES ===================
-# app.py (parte relevante da aba Professores)
-
 with aba3:
     st.header("Professores")
     disc_nomes = [d.nome for d in st.session_state.disciplinas] or ["Nenhuma"]
     with st.form("add_prof"):
         nome = st.text_input("Nome")
         discs = st.multiselect("Disciplinas", disc_nomes)
-        
-        # Días disponíveis
-        st.subheader("Dias disponíveis")
-        dias_disponiveis = set()
-        col1, col2, col3, col4, col5 = st.columns(5)
-        with col1:
-            if st.checkbox("seg", key="seg"):
-                dias_disponiveis.add("seg")
-        with col2:
-            if st.checkbox("ter", key="ter"):
-                dias_disponiveis.add("ter")
-        with col3:
-            if st.checkbox("qua", key="qua"):
-                dias_disponiveis.add("qua")
-        with col4:
-            if st.checkbox("qui", key="qui"):
-                dias_disponiveis.add("qui")
-        with col5:
-            if st.checkbox("sex", key="sex"):
-                dias_disponiveis.add("sex")
-
-        # Horários disponíveis
-        st.subheader("Horários disponíveis")
-        horarios_disponiveis = set()
-        col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
-        with col1:
-            if st.checkbox("1", key="h1"):
-                horarios_disponiveis.add(1)
-        with col2:
-            if st.checkbox("2", key="h2"):
-                horarios_disponiveis.add(2)
-        with col3:
-            if st.checkbox("3", key="h3"):
-                horarios_disponiveis.add(3)
-        with col4:
-            if st.checkbox("4", key="h4"):
-                horarios_disponiveis.add(4)
-        with col5:
-            if st.checkbox("5", key="h5"):
-                horarios_disponiveis.add(5)
-        with col6:
-            if st.checkbox("6", key="h6"):
-                horarios_disponiveis.add(6)
-        with col7:
-            if st.checkbox("7", key="h7"):
-                horarios_disponiveis.add(7)
-        with col8:
-            if st.checkbox("8", key="h8"):
-                horarios_disponiveis.add(8)
-
+        dias = st.multiselect("Dias disponíveis", DIAS_SEMANA, default=["seg", "ter", "qua", "qui", "sex"])
+        horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,5,6,7], default=[1,2,3,5,6,7])
         restricoes_text = st.text_input("Restrições Específicas (ex: seg_4,qua_7)", "")
         if st.form_submit_button("➕ Adicionar"):
             if nome and discs:
@@ -167,11 +117,36 @@ with aba3:
                 st.session_state.professores.append(Professor(
                     nome=nome,
                     disciplinas=discs,
-                    disponibilidade_dias=dias_disponiveis,
-                    disponibilidade_horarios=horarios_disponiveis,
+                    disponibilidade_dias=set(dias),
+                    disponibilidade_horarios=set(horarios_disp),
                     restricoes=restricoes_set
                 ))
                 st.rerun()
+    for p in st.session_state.professores[:]:
+        with st.expander(p.nome):
+            with st.form(f"edit_prof_{p.id}"):
+                nome = st.text_input("Nome", p.nome, key=f"pn_{p.id}")
+                discs_validas = [d for d in p.disciplinas if d in disc_nomes]
+                discs = st.multiselect("Disciplinas", disc_nomes, default=discs_validas, key=f"pd_{p.id}")
+                dias = st.multiselect("Dias disponíveis", DIAS_SEMANA, 
+                                     default=list(p.disponibilidade_dias), key=f"pdias_{p.id}")
+                horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,5,6,7],
+                                              default=list(p.disponibilidade_horarios), key=f"phor_{p.id}")
+                restricoes_text = st.text_input("Restrições Específicas (ex: seg_4,qua_7)", ", ".join(p.restricoes), key=f"restr_{p.id}")
+                col1, col2 = st.columns(2)
+                if col1.form_submit_button("💾 Salvar"):
+                    restricoes_set = set([r.strip() for r in restricoes_text.split(",") if r.strip()])
+                    st.session_state.professores = [
+                        Professor(nome, discs, set(dias), set(horarios_disp), restricoes_set, p.id) if item.id == p.id else item
+                        for item in st.session_state.professores
+                    ]
+                    st.rerun()
+                if col2.form_submit_button("🗑️ Excluir"):
+                    st.session_state.professores = [
+                        item for item in st.session_state.professores if item.id != p.id
+                    ]
+                    st.rerun()
+
 # =================== ABA 4: TURMAS ===================
 with aba4:
     st.header("Turmas")
@@ -268,7 +243,7 @@ with aba6:
                     st.rerun()
                 if col2.form_submit_button("🗑️ Excluir"):
                     st.session_state.periodos = [
-                        item for item in st.session_state.periodos if item["id"] != p["id"]
+                        item for item in st.session_state.periodos if item.id != p["id"]
                     ]
                     st.rerun()
 
