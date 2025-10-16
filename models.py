@@ -1,11 +1,9 @@
-# models.py
 from dataclasses import dataclass, field
 from typing import List, Set
 import uuid
 
 DIAS_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]
 
-# --- Classes Existentes (mantidas) ---
 @dataclass
 class Disciplina:
     nome: str
@@ -51,20 +49,6 @@ class Aula:
 
 @dataclass
 class Feriado:
-     str
+    data: str
     motivo: str
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-
-# --- NOVA CLASSE ---
-@dataclass
-class DisciplinaTurma:
-    """
-    Representa uma disciplina associada a uma turma específica,
-    com carga horária e professor definidos para aquela turma.
-    """
-    nome: str              # Nome da disciplina (ex: "Matemática")
-    turma_nome: str        # Nome da turma (ex: "6anoA")
-    carga_semanal: int     # Carga horária semanal específica para esta turma
-    professor_nome: str = ""  # Nome do professor designado (opcional inicialmente)
-    professor_fixo: bool = False # Se True, força o uso deste professor
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
