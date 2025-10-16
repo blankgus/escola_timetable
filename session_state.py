@@ -15,7 +15,13 @@ def init_session_state():
             Turma("8anoB", "8ano", "manha"),
             Turma("9anoA", "9ano", "manha"),
             Turma("9anoB", "9ano", "manha"),
-        ]
+            Turma("1emA", "1em", "manha"),
+            Turma("1emB", "1em", "manha"),
+            Turma("2emA", "2em", "manha"),
+            Turma("2emB", "2em", "manha"),
+            Turma("3emA", "3em", "manha"),
+            Turma("3emB", "3em", "manha"),
+         ]
     if "professores" not in st.session_state:
         st.session_state.professores = database.carregar_professores() or [
             Professor("Heliana", ["Português"], {"seg", "ter", "qua", "qui", "sex"}, {1,2,3,5,6,7}),
