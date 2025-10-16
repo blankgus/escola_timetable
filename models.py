@@ -1,3 +1,4 @@
+# models.py
 from dataclasses import dataclass, field
 from typing import List, Set
 import uuid
@@ -49,6 +50,6 @@ class Aula:
 
 @dataclass
 class Feriado:
-    data: str
+    str
     motivo: str
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
