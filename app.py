@@ -25,10 +25,11 @@ HORARIOS_REAIS = {
     1: "07:00-07:50",
     2: "07:50-08:40",
     3: "08:40-09:30",
-    4: "09:30-10:00",  # INTERVALO
-    5: "10:00-10:50",
-    6: "10:50-11:40",
-    7: "11:40-12:30"
+    4: "09:30-09:50", # INTERVALO
+    5: "09:50-10:40",
+    6: "10:40-11:30",
+    7: "11:30-12:20",
+    8: "12:20-13:10"
 }
 
 try:
@@ -57,9 +58,9 @@ st.title("🕒 Gerador Inteligente de Grade Horária")
 abas = st.tabs([
     "🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas",
     "🏫 Salas", "📅 Calendário", "⚙️ Configurações", "🗓️ Feriados",
-    "📊 Verificar Carga", "🎒 Grade por Turma", "🏫 Grade por Sala", "👨‍🏫 Grade por Professor"
+    "🎒 Grade por Turma", "🏫 Grade por Sala", "👨‍🏫 Grade por Professor"
 ])
-(aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8, aba9, aba10, aba11, aba12) = abas
+(aba1, aba2, aba3, aba4, aba5, aba6, aba7, aba8, aba9, aba10, aba11) = abas
 
 # =================== ABA 2: DISCIPLINAS ===================
 with aba2:
@@ -108,7 +109,7 @@ with aba3:
         nome = st.text_input("Nome")
         discs = st.multiselect("Disciplinas", disc_nomes)
         dias = st.multiselect("Dias disponíveis", DIAS_SEMANA, default=["seg", "ter", "qua", "qui", "sex"])
-        horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,5,6,7], default=[1,2,3,5,6,7])
+        horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,4,5,6,7,8], default=[1,2,3,5,6,7,8])
         restricoes_text = st.text_input("Restrições Específicas (ex: seg_4,qua_7)", "")
         if st.form_submit_button("➕ Adicionar"):
             if nome and discs:
@@ -129,7 +130,7 @@ with aba3:
                 discs = st.multiselect("Disciplinas", disc_nomes, default=discs_validas, key=f"pd_{p.id}")
                 dias = st.multiselect("Dias disponíveis", DIAS_SEMANA, 
                                      default=list(p.disponibilidade_dias), key=f"pdias_{p.id}")
-                horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,5,6,7],
+                horarios_disp = st.multiselect("Horários disponíveis", [1,2,3,4,5,6,7,8],
                                               default=list(p.disponibilidade_horarios), key=f"phor_{p.id}")
                 restricoes_text = st.text_input("Restrições Específicas (ex: seg_4,qua_7)", ", ".join(p.restricoes), key=f"restr_{p.id}")
                 col1, col2 = st.columns(2)
@@ -242,7 +243,7 @@ with aba6:
                     st.rerun()
                 if col2.form_submit_button("🗑️ Excluir"):
                     st.session_state.periodos = [
-                        item for item in st.session_state.periodos if item.id != p["id"]
+                        item for item in st.session_state.periodos if item["id"] != p["id"]
                     ]
                     st.rerun()
 
@@ -279,33 +280,6 @@ with aba8:
                         item for item in st.session_state.feriados if item.id != f["id"]
                     ]
                     st.rerun()
-
-# =================== ABA 9: VERIFICAR CARGA ===================
-with aba9:
-    st.header("Verificação de Carga Horária por Turma")
-    if not st.session_state.disciplinas:
-        st.warning("⚠️ Nenhuma disciplina cadastrada.")
-    else:
-        turmas_lista = [t.nome for t in st.session_state.turmas]
-        if turmas_lista:
-            turma_selecionada = st.selectbox("Selecione a turma", turmas_lista)
-            disciplinas_da_turma = [
-                d for d in st.session_state.disciplinas
-                if turma_selecionada[:4] in d.series  # ex: "6ano" em "6anoA"
-            ]
-            total = sum(d.carga_semanal for d in disciplinas_da_turma)
-            st.metric("Carga Total da Turma", total)
-            df_carga = pd.DataFrame([
-                {"Disciplina": d.nome, "Carga": d.carga_semanal}
-                for d in disciplinas_da_turma
-            ])
-            st.dataframe(df_carga, use_container_width=True)
-            if total != 25:
-                st.warning(f"⚠️ A carga da turma {turma_selecionada} é {total}, mas deveria ser 25.")
-            else:
-                st.success(f"✅ A carga da turma {turma_selecionada} está correta: {total} aulas/semana.")
-        else:
-            st.warning("⚠️ Nenhuma turma cadastrada.")
 
 # =================== ABA 7: CONFIGURAÇÕES ===================
 with aba7:
@@ -440,8 +414,8 @@ with aba1:
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
-# =================== ABA 10: GRADE POR TURMA ===================
-with aba10:
+# =================== ABA 9: GRADE POR TURMA ===================
+with aba9:
     st.header("Grade Semanal por Turma")
     if st.session_state.aulas:
         aulas = st.session_state.aulas
@@ -457,8 +431,8 @@ with aba10:
     else:
         st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
 
-# =================== ABA 11: GRADE POR SALA ===================
-with aba11:
+# =================== ABA 10: GRADE POR SALA ===================
+with aba10:
     st.header("Ocupação Semanal por Sala")
     if st.session_state.aulas:
         aulas = st.session_state.aulas
@@ -474,8 +448,8 @@ with aba11:
     else:
         st.info("⚠️ Gere a grade na aba 'Início' primeiro.")
 
-# =================== ABA 12: GRADE POR PROFESSOR ===================
-with aba12:
+# =================== ABA 11: GRADE POR PROFESSOR ===================
+with aba11:
     st.header("Grade Semanal por Professor")
     if st.session_state.aulas:
         aulas = st.session_state.aulas

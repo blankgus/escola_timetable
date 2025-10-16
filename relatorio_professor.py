@@ -1,12 +1,9 @@
-# export.py
+# relatorio_professor.py
 import pandas as pd
-# from fpdf import FPDF # Se for usar PDF
+from typing import List
+from models import Aula # Certifique-se de que o caminho para models.py está correto
 
-# --- Funções existentes (mantidas) ---
-# ... (cole aqui suas funções exportar_para_excel, exportar_para_pdf, etc.) ...
-
-# --- NOVA FUNÇÃO ---
-def gerar_relatorio_professor(professor_nome: str, aulas: list, dia_semana: str = "sex") -> pd.DataFrame:
+def gerar_relatorio_professor(professor_nome: str, aulas: List[Aula], dia_semana: str = "sex") -> pd.DataFrame:
     """
     Gera um DataFrame representando o horário de um professor em um dia específico.
 
@@ -38,9 +35,7 @@ def gerar_relatorio_professor(professor_nome: str, aulas: list, dia_semana: str 
                 None
             )
             if aula_do_professor:
-                # Aqui pode-se adicionar lógica para identificar "Inglês do Integral" etc.
-                # Por enquanto, mostra Turma - Disciplina
-                # Se quiser diferenciar "Integral", pode usar o nome da turma ou disciplina
+                # Lógica para identificar "Inglês do Integral" etc.
                 if "Integral" in aula_do_professor.turma or "integral" in aula_do_professor.disciplina.lower():
                      agenda_do_dia[h] = f"{aula_do_professor.turma} - {aula_do_professor.disciplina}"
                 else:
@@ -66,29 +61,3 @@ def gerar_relatorio_professor(professor_nome: str, aulas: list, dia_semana: str 
     df_agenda.index = df_agenda.index.map(MAPA_HORARIOS).fillna("Horário Inválido")
 
     return df_agenda
-
-
-# --- Função auxiliar para PDF (exemplo usando fpdf) ---
-# def exportar_relatorio_para_pdf(df_relatorio: pd.DataFrame, professor_nome: str, dia_semana: str) -> bytes:
-#     """
-#     Exporta o DataFrame do relatório do professor para bytes de um PDF.
-#     Requer a biblioteca fpdf.
-#     """
-#     pdf_buffer = io.BytesIO()
-#     pdf = FPDF()
-#     pdf.add_page()
-#     pdf.set_font("Arial", size=12)
-#     pdf.cell(200, 10, txt=f"Horário de {professor_nome} - {dia_semana.capitalize()}-Feira", ln=True, align='C')
-#     pdf.ln(10)
-
-#     # Itera pelas linhas do DataFrame e adiciona ao PDF
-#     for index, row in df_relatorio.iterrows():
-#         pdf.cell(0, 10, txt=f"{index}: {row[dia_semana.capitalize()]}", ln=True)
-
-#     pdf.output(pdf_buffer)
-#     pdf_buffer.seek(0) # Volta para o início do buffer
-#     return pdf_buffer.getvalue()
-
-
-# Se você tiver outras funções de exportação, mantenha-as aqui também.
-# ... (restante do seu export.py existente) ...
