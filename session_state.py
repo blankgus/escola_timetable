@@ -8,7 +8,7 @@ def init_session_state():
     if "turmas" not in st.session_state:
         st.session_state.turmas = database.carregar_turmas() or [
             # Ensino Fundamental
-            Turma("6anoA", "6ano", "manha"),
+            Turma("6anoAbcd", "6ano", "manha"),
             Turma("6anoB", "6ano", "manha"),
             Turma("7anoA", "7ano", "manha"),
             Turma("7anoB", "7ano", "manha"),
@@ -17,7 +17,7 @@ def init_session_state():
             Turma("9anoA", "9ano", "manha"),
             Turma("9anoB", "9ano", "manha"),
             # Ensino Médio
-            Turma("1emA", "1em", "manha"),
+            Turma("1emAbCD", "1em", "manha"),
             Turma("1emB", "1em", "manha"),
             Turma("2emA", "2em", "manha"),
             Turma("2emB", "2em", "manha"),
