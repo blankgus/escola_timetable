@@ -1,9 +1,8 @@
-# models.py
 from dataclasses import dataclass, field
 from typing import List, Set
 import uuid
 
-DIAS_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]
+DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex"]
 
 @dataclass
 class Disciplina:
@@ -11,6 +10,7 @@ class Disciplina:
     carga_semanal: int
     tipo: str
     series: List[str]
+    grupo: str = "A"  # ✅ NOVO: "A" ou "B"
     cor_fundo: str = "#4A90E2"
     cor_fonte: str = "#FFFFFF"
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -19,9 +19,8 @@ class Disciplina:
 class Professor:
     nome: str
     disciplinas: List[str]
-    disponibilidade_dias: Set[str]
-    disponibilidade_horarios: Set[int]
-    restricoes: Set[str] = field(default_factory=set)
+    disponibilidade: Set[str]  # dias da semana
+    grupo: str = "A"  # ✅ NOVO: "A" ou "B" ou "AMBOS"
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
@@ -29,6 +28,7 @@ class Turma:
     nome: str
     serie: str
     turno: str
+    grupo: str = "A"  # ✅ NOVO: "A" ou "B"
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
@@ -46,6 +46,7 @@ class Aula:
     dia: str
     horario: int
     sala: str = "Sala 1"
+    grupo: str = "A"  # ✅ NOVO: "A" ou "B"
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
