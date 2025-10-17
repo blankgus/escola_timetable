@@ -29,22 +29,26 @@ HORARIOS_REAIS = {
     4: "09:30-10:00",
     5: "10:00-10:50",
     6: "10:50-11:40",
-    7: "11:40-12:30"
+    7: "11:40-12:30",
+    8: "12:30-13:10"
 }
 
+# ✅ SOLUÇÃO PARA O ERRO: RESETAR BANCO SE HOUVER PROBLEMAS
 try:
+    # Descomente a linha abaixo para resetar o banco se estiver com problemas
+    # database.resetar_banco()
+    
     init_session_state()
     
-    # ✅ VERIFICAR SE DADOS FORAM CARREGADOS
-    if not any([st.session_state.turmas, st.session_state.professores, st.session_state.disciplinas]):
-        st.info("📥 Carregando dados do banco...")
-        st.session_state.turmas = database.carregar_turmas() or st.session_state.turmas
-        st.session_state.professores = database.carregar_professores() or st.session_state.professores
-        st.session_state.disciplinas = database.carregar_disciplinas() or st.session_state.disciplinas
-        st.session_state.salas = database.carregar_salas() or st.session_state.salas
-        
 except Exception as e:
     st.error(f"❌ Erro na inicialização: {str(e)}")
+    st.error("💡 Tente resetar o banco de dados:")
+    
+    if st.button("🔄 Resetar Banco de Dados (Resolver Erro)"):
+        database.resetar_banco()
+        st.success("✅ Banco resetado! Recarregue a página.")
+        st.rerun()
+    
     st.code(traceback.format_exc())
     st.stop()
 
