@@ -3,6 +3,39 @@ import sqlite3
 import json
 import uuid
 
+# database.py
+import sqlite3
+import json
+import uuid
+
+def init_db():
+    conn = sqlite3.connect("escola.db")
+    cursor = conn.cursor()
+    # Criar tabelas...
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS turmas (
+            id TEXT PRIMARY KEY,
+            nome TEXT,
+            serie TEXT,
+            turno TEXT
+        )
+    """)
+    # ... (outras tabelas)
+    conn.commit()
+    conn.close()
+
+def salvar_turmas(turmas):
+    conn = sqlite3.connect("escola.db")
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM turmas")
+    for t in turmas:
+        cursor.execute(
+            "INSERT INTO turmas (id, nome, serie, turno) VALUES (?, ?, ?, ?)",
+            (t.id, t.nome, t.serie, t.turno)
+        )
+    conn.commit()
+    conn.close()
+
 def init_db():
     conn = sqlite3.connect("escola.db")
     cursor = conn.cursor()
