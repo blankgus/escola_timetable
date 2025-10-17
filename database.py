@@ -6,7 +6,7 @@ def init_db():
     conn = sqlite3.connect('escola.db')
     c = conn.cursor()
     
-    # ✅ ADICIONAR CAMPO GRUPO NAS TABELAS
+    # ✅ RECRIAR TODAS AS TABELAS COM ESTRUTURA ATUALIZADA
     c.execute('''CREATE TABLE IF NOT EXISTS turmas (
         id TEXT PRIMARY KEY,
         nome TEXT UNIQUE,
@@ -84,7 +84,16 @@ def carregar_turmas():
     c.execute("SELECT * FROM turmas")
     rows = c.fetchall()
     conn.close()
-    return [Turma(nome=r[1], serie=r[2], turno=r[3], grupo=r[4], id=r[0]) for r in rows]
+    
+    turmas = []
+    for r in rows:
+        # ✅ VERIFICAR SE TEM O CAMPO GRUPO (posição 4)
+        if len(r) >= 5:
+            turmas.append(Turma(nome=r[1], serie=r[2], turno=r[3], grupo=r[4], id=r[0]))
+        else:
+            # Se não tem grupo, assume "A" como padrão
+            turmas.append(Turma(nome=r[1], serie=r[2], turno=r[3], grupo="A", id=r[0]))
+    return turmas
 
 def salvar_professores(professores):
     conn = sqlite3.connect('escola.db')
@@ -102,16 +111,27 @@ def carregar_professores():
     c.execute("SELECT * FROM professores")
     rows = c.fetchall()
     conn.close()
-    return [
-        Professor(
-            nome=r[1], 
-            disciplinas=json.loads(r[2]), 
-            disponibilidade=set(json.loads(r[3])), 
-            grupo=r[4],
-            id=r[0]
-        )
-        for r in rows
-    ]
+    
+    professores = []
+    for r in rows:
+        if len(r) >= 5:
+            professores.append(Professor(
+                nome=r[1], 
+                disciplinas=json.loads(r[2]), 
+                disponibilidade=set(json.loads(r[3])), 
+                grupo=r[4],
+                id=r[0]
+            ))
+        else:
+            # Se não tem grupo, assume "A" como padrão
+            professores.append(Professor(
+                nome=r[1], 
+                disciplinas=json.loads(r[2]), 
+                disponibilidade=set(json.loads(r[3])), 
+                grupo="A",
+                id=r[0]
+            ))
+    return professores
 
 def salvar_disciplinas(disciplinas):
     conn = sqlite3.connect('escola.db')
@@ -129,19 +149,39 @@ def carregar_disciplinas():
     c.execute("SELECT * FROM disciplinas")
     rows = c.fetchall()
     conn.close()
-    return [
-        Disciplina(
-            nome=r[1], 
-            carga_semanal=r[2], 
-            tipo=r[3], 
-            series=json.loads(r[4]), 
-            grupo=r[5],
-            cor_fundo=r[6],
-            cor_fonte=r[7],
-            id=r[0]
-        )
-        for r in rows
-    ]
+    
+    disciplinas = []
+    for r in rows:
+        if len(r) >= 8:  # Tem todos os campos incluindo cores
+            disciplinas.append(Disciplina(
+                nome=r[1], 
+                carga_semanal=r[2], 
+                tipo=r[3], 
+                series=json.loads(r[4]), 
+                grupo=r[5],
+                cor_fundo=r[6],
+                cor_fonte=r[7],
+                id=r[0]
+            ))
+        elif len(r) >= 6:  # Tem grupo mas não tem cores
+            disciplinas.append(Disciplina(
+                nome=r[1], 
+                carga_semanal=r[2], 
+                tipo=r[3], 
+                series=json.loads(r[4]), 
+                grupo=r[5],
+                id=r[0]
+            ))
+        else:  # Estrutura antiga
+            disciplinas.append(Disciplina(
+                nome=r[1], 
+                carga_semanal=r[2], 
+                tipo=r[3], 
+                series=json.loads(r[4]), 
+                grupo="A",
+                id=r[0]
+            ))
+    return disciplinas
 
 def salvar_salas(salas):
     conn = sqlite3.connect('escola.db')
@@ -213,16 +253,36 @@ def carregar_grade():
     c.execute("SELECT * FROM aulas")
     rows = c.fetchall()
     conn.close()
-    return [
-        Aula(
-            turma=r[1], 
-            disciplina=r[2], 
-            professor=r[3], 
-            dia=r[4], 
-            horario=r[5], 
-            sala=r[6],
-            grupo=r[7],
-            id=r[0]
-        )
-        for r in rows
-    ]
+    
+    aulas = []
+    for r in rows:
+        if len(r) >= 8:  # Tem grupo
+            aulas.append(Aula(
+                turma=r[1], 
+                disciplina=r[2], 
+                professor=r[3], 
+                dia=r[4], 
+                horario=r[5], 
+                sala=r[6],
+                grupo=r[7],
+                id=r[0]
+            ))
+        else:  # Estrutura antiga
+            aulas.append(Aula(
+                turma=r[1], 
+                disciplina=r[2], 
+                professor=r[3], 
+                dia=r[4], 
+                horario=r[5], 
+                sala=r[6],
+                grupo="A",  # Assume grupo A
+                id=r[0]
+            ))
+    return aulas
+
+def resetar_banco():
+    """Função para resetar completamente o banco de dados (útil para desenvolvimento)"""
+    import os
+    if os.path.exists('escola.db'):
+        os.remove('escola.db')
+    init_db()
