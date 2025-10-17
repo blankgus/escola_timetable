@@ -145,18 +145,37 @@ def carregar_disciplinas():
     cursor.execute("SELECT * FROM disciplinas")
     rows = cursor.fetchall()
     from models import Disciplina
-    disciplinas = [
-        Disciplina(
-            nome=row[1],
-            carga_semanal=row[2],
-            tipo=row[3],
-            series=json.loads(row[4]),
-            cor_fundo=row[5],
-            cor_fonte=row[6],
-            id=row[0]
-        )
-        for row in rows
-    ]
+    disciplinas = []
+    for row in rows:
+        try:
+            # Tentar decodificar as séries
+            series_list = json.loads(row[4])
+            # Criar a disciplina
+            disciplinas.append(
+                Disciplina(
+                    nome=row[1],
+                    carga_semanal=row[2],
+                    tipo=row[3],
+                    series=series_list,
+                    cor_fundo=row[5],
+                    cor_fonte=row[6],
+                    id=row[0]
+                )
+            )
+        except json.JSONDecodeError as e:
+            print(f"Erro ao decodificar séries da disciplina {row[1]}: {e}")
+            # Se der erro, adicionar sem séries (ou com lista vazia)
+            disciplinas.append(
+                Disciplina(
+                    nome=row[1],
+                    carga_semanal=row[2],
+                    tipo=row[3],
+                    series=[],
+                    cor_fundo=row[5],
+                    cor_fonte=row[6],
+                    id=row[0]
+                )
+            )
     conn.close()
     return disciplinas
 
