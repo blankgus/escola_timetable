@@ -48,21 +48,6 @@ with abas[0]:  # ABA INÍCIO
     with col4:
         st.metric("Salas", len(st.session_state.salas))
     
-    # Estatísticas por grupo
-    turmas_a = [t for t in st.session_state.turmas if obter_grupo_seguro(t) == "A"]
-    turmas_b = [t for t in st.session_state.turmas if obter_grupo_seguro(t) == "B"]
-    
-    st.subheader("📊 Estatísticas por Grupo")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("**Grupo A (Manhã)**")
-        st.write(f"Turmas: {len(turmas_a)}")
-        st.write(f"Disciplinas: {len([d for d in st.session_state.disciplinas if obter_grupo_seguro(d) == 'A'])}")
-    with col2:
-        st.write("**Grupo B (Tarde)**")
-        st.write(f"Turmas: {len(turmas_b)}")
-        st.write(f"Disciplinas: {len([d for d in st.session_state.disciplinas if obter_grupo_seguro(d) == 'B'])}")
-    
     if st.button("💾 Salvar Tudo no Banco"):
         if salvar_tudo():
             st.success("✅ Todos os dados salvos!")
@@ -72,7 +57,6 @@ with abas[1]:  # ABA DISCIPLINAS
     
     grupo_filtro = st.selectbox("Filtrar por Grupo", ["Todos", "A", "B"], key="filtro_disc")
     
-    # ✅ ADICIONAR DISCIPLINA
     with st.expander("➕ Adicionar Nova Disciplina", expanded=False):
         with st.form("add_disc"):
             col1, col2 = st.columns(2)
@@ -97,7 +81,6 @@ with abas[1]:  # ABA DISCIPLINAS
                 else:
                     st.error("❌ Preencha todos os campos obrigatórios (*)")
     
-    # ✅ LISTA DE DISCIPLINAS COM EDIÇÃO
     st.subheader("📋 Lista de Disciplinas")
     
     disciplinas_exibir = st.session_state.disciplinas
@@ -109,7 +92,6 @@ with abas[1]:  # ABA DISCIPLINAS
     
     for disc in disciplinas_exibir:
         with st.expander(f"📖 {disc.nome} [{obter_grupo_seguro(disc)}]", expanded=False):
-            # ✅ FORMULÁRIO DE EDIÇÃO
             with st.form(f"edit_disc_{disc.id}"):
                 col1, col2 = st.columns(2)
                 with col1:
@@ -137,7 +119,6 @@ with abas[1]:  # ABA DISCIPLINAS
                     if st.form_submit_button("💾 Salvar Alterações"):
                         if novo_nome and novas_series:
                             series_list = [s.strip() for s in novas_series.split(",") if s.strip()]
-                            # Atualizar disciplina
                             disc.nome = novo_nome
                             disc.carga_semanal = nova_carga
                             disc.tipo = novo_tipo
@@ -159,13 +140,12 @@ with abas[1]:  # ABA DISCIPLINAS
                             st.success("✅ Disciplina excluída!")
                         st.rerun()
 
-with abas[2]:  # ABA PROFESSORES
+with abas[2]:  # ABA PROFESSORES (CORRIGIDA)
     st.header("👩‍🏫 Professores")
     
     grupo_filtro = st.selectbox("Filtrar por Grupo", ["Todos", "A", "B", "AMBOS"], key="filtro_prof")
     disc_nomes = [d.nome for d in st.session_state.disciplinas]
     
-    # ✅ ADICIONAR PROFESSOR
     with st.expander("➕ Adicionar Novo Professor", expanded=False):
         with st.form("add_prof"):
             col1, col2 = st.columns(2)
@@ -177,7 +157,6 @@ with abas[2]:  # ABA PROFESSORES
                 disponibilidade = st.multiselect("Dias Disponíveis*", DIAS_SEMANA, default=DIAS_SEMANA)
                 st.write("**Horários Indisponíveis:**")
                 
-                # ✅ HORÁRIOS INDISPONÍVEIS
                 horarios_indisponiveis = []
                 for dia in DIAS_SEMANA:
                     with st.container():
@@ -204,7 +183,6 @@ with abas[2]:  # ABA PROFESSORES
                 else:
                     st.error("❌ Preencha todos os campos obrigatórios (*)")
     
-    # ✅ LISTA DE PROFESSORES COM EDIÇÃO
     st.subheader("📋 Lista de Professores")
     
     professores_exibir = st.session_state.professores
@@ -216,17 +194,22 @@ with abas[2]:  # ABA PROFESSORES
     
     for prof in professores_exibir:
         with st.expander(f"👨‍🏫 {prof.nome} [{obter_grupo_seguro(prof)}]", expanded=False):
-            # ✅ FORMULÁRIO DE EDIÇÃO
+            # ✅ CORREÇÃO: Filtrar disciplinas válidas
+            disciplinas_validas = [d for d in prof.disciplinas if d in disc_nomes]
+            
             with st.form(f"edit_prof_{prof.id}"):
                 col1, col2 = st.columns(2)
                 with col1:
                     novo_nome = st.text_input("Nome", prof.nome, key=f"nome_prof_{prof.id}")
+                    
+                    # ✅ CORREÇÃO: Usar apenas disciplinas válidas como default
                     novas_disciplinas = st.multiselect(
                         "Disciplinas", 
                         disc_nomes, 
-                        default=prof.disciplinas,
+                        default=disciplinas_validas,  # ✅ Só disciplinas que existem
                         key=f"disc_prof_{prof.id}"
                     )
+                    
                     novo_grupo = st.selectbox(
                         "Grupo", 
                         ["A", "B", "AMBOS"],
@@ -242,7 +225,6 @@ with abas[2]:  # ABA PROFESSORES
                     )
                     
                     st.write("**Horários Indisponíveis:**")
-                    # ✅ EDIÇÃO DE HORÁRIOS INDISPONÍVEIS
                     novos_horarios_indisponiveis = []
                     for dia in DIAS_SEMANA:
                         with st.container():
@@ -262,7 +244,6 @@ with abas[2]:  # ABA PROFESSORES
                 with col1:
                     if st.form_submit_button("💾 Salvar Alterações"):
                         if novo_nome and novas_disciplinas and nova_disponibilidade:
-                            # Atualizar professor
                             prof.nome = novo_nome
                             prof.disciplinas = novas_disciplinas
                             prof.grupo = novo_grupo
@@ -287,7 +268,6 @@ with abas[3]:  # ABA TURMAS
     
     grupo_filtro = st.selectbox("Filtrar por Grupo", ["Todos", "A", "B"], key="filtro_turma")
     
-    # ✅ ADICIONAR TURMA
     with st.expander("➕ Adicionar Nova Turma", expanded=False):
         with st.form("add_turma"):
             col1, col2 = st.columns(2)
@@ -308,7 +288,6 @@ with abas[3]:  # ABA TURMAS
                 else:
                     st.error("❌ Preencha todos os campos obrigatórios (*)")
     
-    # ✅ LISTA DE TURMAS COM EDIÇÃO
     st.subheader("📋 Lista de Turmas")
     
     turmas_exibir = st.session_state.turmas
@@ -320,7 +299,6 @@ with abas[3]:  # ABA TURMAS
     
     for turma in turmas_exibir:
         with st.expander(f"🎒 {turma.nome} [{obter_grupo_seguro(turma)}]", expanded=False):
-            # ✅ FORMULÁRIO DE EDIÇÃO
             with st.form(f"edit_turma_{turma.id}"):
                 col1, col2 = st.columns(2)
                 with col1:
@@ -344,7 +322,6 @@ with abas[3]:  # ABA TURMAS
                 with col1:
                     if st.form_submit_button("💾 Salvar Alterações"):
                         if novo_nome and nova_serie:
-                            # Atualizar turma
                             turma.nome = novo_nome
                             turma.serie = nova_serie
                             turma.turno = novo_turno
@@ -366,7 +343,6 @@ with abas[3]:  # ABA TURMAS
 with abas[4]:  # ABA SALAS
     st.header("🏫 Salas")
     
-    # ✅ ADICIONAR SALA
     with st.expander("➕ Adicionar Nova Sala", expanded=False):
         with st.form("add_sala"):
             col1, col2 = st.columns(2)
@@ -386,7 +362,6 @@ with abas[4]:  # ABA SALAS
                 else:
                     st.error("❌ Preencha todos os campos obrigatórios (*)")
     
-    # ✅ LISTA DE SALAS COM EDIÇÃO
     st.subheader("📋 Lista de Salas")
     
     if not st.session_state.salas:
@@ -394,7 +369,6 @@ with abas[4]:  # ABA SALAS
     
     for sala in st.session_state.salas:
         with st.expander(f"🏫 {sala.nome}", expanded=False):
-            # ✅ FORMULÁRIO DE EDIÇÃO
             with st.form(f"edit_sala_{sala.id}"):
                 col1, col2 = st.columns(2)
                 with col1:
@@ -412,7 +386,6 @@ with abas[4]:  # ABA SALAS
                 with col1:
                     if st.form_submit_button("💾 Salvar Alterações"):
                         if novo_nome:
-                            # Atualizar sala
                             sala.nome = novo_nome
                             sala.capacidade = nova_capacidade
                             sala.tipo = novo_tipo
@@ -432,87 +405,8 @@ with abas[4]:  # ABA SALAS
 
 with abas[5]:  # ABA GERAR GRADE
     st.header("🗓️ Gerar Grade Horária")
-    
-    st.subheader("🎯 Configurações da Grade")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        # ✅ OPÇÕES DE GRADE
-        tipo_grade = st.selectbox(
-            "Tipo de Grade",
-            [
-                "Grade Completa - Todas as Turmas",
-                "Grade por Grupo A (Manhã)",
-                "Grade por Grupo B (Tarde)", 
-                "Grade por Turma Específica",
-                "Grade por Professor Específico"
-            ]
-        )
-        
-        # ✅ SELEÇÃO DE TURMA ESPECÍFICA
-        if tipo_grade == "Grade por Turma Específica":
-            turmas_opcoes = [t.nome for t in st.session_state.turmas]
-            turma_selecionada = st.selectbox("Selecionar Turma", turmas_opcoes)
-        
-        # ✅ SELEÇÃO DE PROFESSOR ESPECÍFICO
-        elif tipo_grade == "Grade por Professor Específico":
-            professores_opcoes = [p.nome for p in st.session_state.professores]
-            professor_selecionado = st.selectbox("Selecionar Professor", professores_opcoes)
-    
-    with col2:
-        tipo_algoritmo = st.selectbox(
-            "Algoritmo de Geração",
-            ["Google OR-Tools (Recomendado)", "Algoritmo Simples"]
-        )
-        
-        relaxar_horarios = st.checkbox(
-            "Relaxar horários ideais (permitir disciplinas pesadas à tarde)",
-            value=False
-        )
-    
-    st.subheader("📊 Pré-análise")
-    
-    # Calcular carga horária conforme seleção
-    if tipo_grade == "Grade por Grupo A (Manhã)":
-        turmas_filtradas = [t for t in st.session_state.turmas if obter_grupo_seguro(t) == "A"]
-        grupo_texto = "Grupo A"
-    elif tipo_grade == "Grade por Grupo B (Tarde)":
-        turmas_filtradas = [t for t in st.session_state.turmas if obter_grupo_seguro(t) == "B"]
-        grupo_texto = "Grupo B"
-    elif tipo_grade == "Grade por Turma Específica":
-        turmas_filtradas = [t for t in st.session_state.turmas if t.nome == turma_selecionada]
-        grupo_texto = f"Turma {turma_selecionada}"
-    else:
-        turmas_filtradas = st.session_state.turmas
-        grupo_texto = "Todas as Turmas"
-    
-    disciplinas_filtradas = st.session_state.disciplinas
-    
-    total_aulas = 0
-    for turma in turmas_filtradas:
-        for disc in disciplinas_filtradas:
-            if turma.serie in disc.series:
-                total_aulas += disc.carga_semanal
-    
-    capacidade_total = len(DIAS_SEMANA) * len(HORARIOS_DISPONIVEIS) * len(turmas_filtradas)
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Turmas", len(turmas_filtradas))
-    with col2:
-        st.metric("Aulas Necessárias", total_aulas)
-    with col3:
-        st.metric("Capacidade Disponível", capacidade_total)
-    
-    if total_aulas > capacidade_total:
-        st.error("❌ Capacidade insuficiente! Reduza a carga horária ou aumente os dias/horários.")
-    else:
-        st.success("✅ Capacidade suficiente para gerar grade!")
-    
-    # ✅ BOTÃO GERAR GRADE (funcionalidade básica por enquanto)
-    if st.button("🚀 Gerar Grade Horária", type="primary", use_container_width=True):
-        st.info("🔧 Funcionalidade de geração de grade em desenvolvimento...")
-        st.info("Por enquanto, use os formulários acima para cadastrar seus dados.")
+    st.info("🔧 Funcionalidade em desenvolvimento...")
+    st.write("Configure primeiro as disciplinas, professores e turmas acima.")
 
 # Sidebar
 st.sidebar.title("⚙️ Configurações")

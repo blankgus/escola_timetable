@@ -55,6 +55,7 @@ def criar_turmas_padrao():
 
 def criar_professores_padrao():
     return [
+        # ✅ CORRIGIDO: Usar apenas disciplinas que existem nas disciplinas padrão
         Professor("Ana", ["Matemática A"], {"seg", "ter", "qua", "qui", "sex"}, "A"),
         Professor("Bruno", ["Português A"], {"seg", "ter", "qua", "qui", "sex"}, "A"),
         Professor("Carla", ["História A", "Geografia A"], {"seg", "ter", "qua", "qui", "sex"}, "A"),
@@ -67,6 +68,7 @@ def criar_professores_padrao():
 
 def criar_disciplinas_padrao():
     return [
+        # GRUPO A
         Disciplina("Matemática A", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "A", "#4A90E2", "#FFFFFF"),
         Disciplina("Português A", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "A", "#D35400", "#FFFFFF"),
         Disciplina("História A", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "A", "#C0392B", "#FFFFFF"),
@@ -78,6 +80,8 @@ def criar_disciplinas_padrao():
         Disciplina("Inglês A", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "A", "#2C3E50", "#FFFFFF"),
         Disciplina("Artes A", 1, "leve", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "A", "#E67E22", "#FFFFFF"),
         Disciplina("Educação Física A", 2, "pratica", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "A", "#2ECC71", "#000000"),
+        
+        # GRUPO B
         Disciplina("Matemática B", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "B", "#4A90E2", "#FFFFFF"),
         Disciplina("Português B", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "B", "#D35400", "#FFFFFF"),
         Disciplina("História B", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "B", "#C0392B", "#FFFFFF"),
