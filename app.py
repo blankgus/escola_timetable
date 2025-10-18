@@ -187,6 +187,129 @@ with abas[1]:  # ABA DISCIPLINAS
                             st.success("✅ Disciplina excluída!")
                         st.rerun()
 
+with abas[2]:  # ABA PROFESSORES
+    st.header("👩‍🏫 Professores")
+    
+    grupo_filtro = st.selectbox("Filtrar por Grupo", ["Todos", "A", "B", "AMBOS"], key="filtro_prof")
+    disc_nomes = [d.nome for d in st.session_state.disciplinas]
+    
+    with st.expander("➕ Adicionar Novo Professor", expanded=False):
+        with st.form("add_prof"):
+            col1, col2 = st.columns(2)
+            with col1:
+                nome = st.text_input("Nome do Professor*")
+                disciplinas = st.multiselect("Disciplinas*", disc_nomes)
+                grupo = st.selectbox("Grupo*", ["A", "B", "AMBOS"])
+            with col2:
+                disponibilidade = st.multiselect("Dias Disponíveis*", DIAS_SEMANA, default=DIAS_SEMANA)
+                st.write("**Horários Indisponíveis:**")
+                
+                horarios_indisponiveis = []
+                for dia in DIAS_SEMANA:
+                    with st.container():
+                        st.write(f"**{dia.upper()}:**")
+                        horarios_cols = st.columns(4)
+                        for i, horario in enumerate(HORARIOS_DISPONIVEIS):
+                            with horarios_cols[i % 4]:
+                                if st.checkbox(f"{horario}º", key=f"add_{dia}_{horario}"):
+                                    horarios_indisponiveis.append(f"{dia}_{horario}")
+            
+            if st.form_submit_button("✅ Adicionar Professor"):
+                if nome and disciplinas and disponibilidade:
+                    novo_professor = Professor(
+                        nome, 
+                        disciplinas, 
+                        set(disponibilidade), 
+                        grupo,
+                        set(horarios_indisponiveis)
+                    )
+                    st.session_state.professores.append(novo_professor)
+                    if salvar_tudo():
+                        st.success(f"✅ Professor '{nome}' adicionado!")
+                    st.rerun()
+                else:
+                    st.error("❌ Preencha todos os campos obrigatórios (*)")
+    
+    st.subheader("📋 Lista de Professores")
+    
+    professores_exibir = st.session_state.professores
+    if grupo_filtro != "Todos":
+        professores_exibir = [p for p in st.session_state.professores if obter_grupo_seguro(p) == grupo_filtro]
+    
+    if not professores_exibir:
+        st.info("📝 Nenhum professor cadastrado. Use o formulário acima para adicionar.")
+    
+    for prof in professores_exibir:
+        with st.expander(f"👨‍🏫 {prof.nome} [{obter_grupo_seguro(prof)}]", expanded=False):
+            # Filtrar disciplinas válidas
+            disciplinas_validas = [d for d in prof.disciplinas if d in disc_nomes]
+            
+            with st.form(f"edit_prof_{prof.id}"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    novo_nome = st.text_input("Nome", prof.nome, key=f"nome_prof_{prof.id}")
+                    
+                    # Usar apenas disciplinas válidas como default
+                    novas_disciplinas = st.multiselect(
+                        "Disciplinas", 
+                        disc_nomes, 
+                        default=disciplinas_validas,
+                        key=f"disc_prof_{prof.id}"
+                    )
+                    
+                    novo_grupo = st.selectbox(
+                        "Grupo", 
+                        ["A", "B", "AMBOS"],
+                        index=["A", "B", "AMBOS"].index(obter_grupo_seguro(prof)),
+                        key=f"grupo_prof_{prof.id}"
+                    )
+                with col2:
+                    nova_disponibilidade = st.multiselect(
+                        "Dias Disponíveis", 
+                        DIAS_SEMANA, 
+                        default=list(prof.disponibilidade),
+                        key=f"disp_prof_{prof.id}"
+                    )
+                    
+                    st.write("**Horários Indisponíveis:**")
+                    novos_horarios_indisponiveis = []
+                    for dia in DIAS_SEMANA:
+                        with st.container():
+                            st.write(f"**{dia.upper()}:**")
+                            horarios_cols = st.columns(4)
+                            for i, horario in enumerate(HORARIOS_DISPONIVEIS):
+                                with horarios_cols[i % 4]:
+                                    checked = f"{dia}_{horario}" in prof.horarios_indisponiveis
+                                    if st.checkbox(
+                                        f"{horario}º", 
+                                        value=checked,
+                                        key=f"edit_{prof.id}_{dia}_{horario}"
+                                    ):
+                                        novos_horarios_indisponiveis.append(f"{dia}_{horario}")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.form_submit_button("💾 Salvar Alterações"):
+                        if novo_nome and novas_disciplinas and nova_disponibilidade:
+                            prof.nome = novo_nome
+                            prof.disciplinas = novas_disciplinas
+                            prof.grupo = novo_grupo
+                            prof.disponibilidade = set(nova_disponibilidade)
+                            prof.horarios_indisponiveis = set(novos_horarios_indisponiveis)
+                            
+                            if salvar_tudo():
+                                st.success("✅ Professor atualizado!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Preencha todos os campos obrigatórios")
+                
+                with col2:
+                    if st.form_submit_button("🗑️ Excluir Professor", type="secondary"):
+                        st.session_state.professores.remove(prof)
+                        if salvar_tudo():
+                            st.success("✅ Professor excluído!")
+                        st.rerun()
+
 with abas[3]:  # ABA TURMAS
     st.header("🎒 Turmas")
     
@@ -282,6 +405,69 @@ with abas[3]:  # ABA TURMAS
                         st.session_state.turmas.remove(turma)
                         if salvar_tudo():
                             st.success("✅ Turma excluída!")
+                        st.rerun()
+
+with abas[4]:  # ABA SALAS
+    st.header("🏫 Salas")
+    
+    with st.expander("➕ Adicionar Nova Sala", expanded=False):
+        with st.form("add_sala"):
+            col1, col2 = st.columns(2)
+            with col1:
+                nome = st.text_input("Nome da Sala*")
+                capacidade = st.number_input("Capacidade*", 1, 100, 30)
+            with col2:
+                tipo = st.selectbox("Tipo*", ["normal", "laboratório", "auditório"])
+            
+            if st.form_submit_button("✅ Adicionar Sala"):
+                if nome:
+                    nova_sala = Sala(nome, capacidade, tipo)
+                    st.session_state.salas.append(nova_sala)
+                    if salvar_tudo():
+                        st.success(f"✅ Sala '{nome}' adicionada!")
+                    st.rerun()
+                else:
+                    st.error("❌ Preencha todos os campos obrigatórios (*)")
+    
+    st.subheader("📋 Lista de Salas")
+    
+    if not st.session_state.salas:
+        st.info("📝 Nenhuma sala cadastrada. Use o formulário acima para adicionar.")
+    
+    for sala in st.session_state.salas:
+        with st.expander(f"🏫 {sala.nome}", expanded=False):
+            with st.form(f"edit_sala_{sala.id}"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    novo_nome = st.text_input("Nome", sala.nome, key=f"nome_sala_{sala.id}")
+                    nova_capacidade = st.number_input("Capacidade", 1, 100, sala.capacidade, key=f"cap_sala_{sala.id}")
+                with col2:
+                    novo_tipo = st.selectbox(
+                        "Tipo", 
+                        ["normal", "laboratório", "auditório"],
+                        index=["normal", "laboratório", "auditório"].index(sala.tipo),
+                        key=f"tipo_sala_{sala.id}"
+                    )
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.form_submit_button("💾 Salvar Alterações"):
+                        if novo_nome:
+                            sala.nome = novo_nome
+                            sala.capacidade = nova_capacidade
+                            sala.tipo = novo_tipo
+                            
+                            if salvar_tudo():
+                                st.success("✅ Sala atualizada!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Preencha todos os campos obrigatórios")
+                
+                with col2:
+                    if st.form_submit_button("🗑️ Excluir Sala", type="secondary"):
+                        st.session_state.salas.remove(sala)
+                        if salvar_tudo():
+                            st.success("✅ Sala excluída!")
                         st.rerun()
 
 with abas[5]:  # ABA GERAR GRADE
@@ -396,8 +582,9 @@ with abas[5]:  # ABA GERAR GRADE
         st.error("❌ Capacidade insuficiente! Reduza a carga horária.")
         st.write("**Aulas por turma:**")
         for turma, aulas in aulas_por_turma.items():
-            grupo_turma = obter_grupo_seguro(next(t for t in turmas_filtradas if t.nome == turma))
-            carga_maxima = calcular_carga_maxima(next(t for t in turmas_filtradas if t.nome == turma).serie)
+            turma_obj = next(t for t in turmas_filtradas if t.nome == turma)
+            grupo_turma = obter_grupo_seguro(turma_obj)
+            carga_maxima = calcular_carga_maxima(turma_obj.serie)
             status = "✅" if aulas <= carga_maxima else "❌"
             st.write(f"- {turma} [{grupo_turma}]: {aulas}/{carga_maxima}h {status}")
     elif problemas_carga:
@@ -463,11 +650,99 @@ with abas[5]:  # ABA GERAR GRADE
                         if salvar_tudo():
                             st.success(f"✅ Grade {grupo_texto} gerada com {metodo}! ({len(aulas)} aulas)")
                         
-                        # Resto do código para exibir a grade gerada...
-                        # [Mantido igual da versão anterior]
+                        # Exibir estatísticas
+                        st.subheader("📈 Estatísticas da Grade Gerada")
                         
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Total de Aulas", len(aulas))
+                        with col2:
+                            professores_utilizados = len(set(a.professor for a in aulas))
+                            st.metric("Professores Utilizados", professores_utilizados)
+                        with col3:
+                            turmas_utilizadas = len(set(a.turma for a in aulas))
+                            st.metric("Turmas com Aula", turmas_utilizadas)
+                        
+                        # Exibir grade gerada
+                        st.subheader("📋 Grade Horária Gerada")
+                        
+                        if aulas:
+                            # Criar DataFrame com as aulas
+                            df_aulas = pd.DataFrame([
+                                {
+                                    "Turma": a.turma,
+                                    "Disciplina": a.disciplina, 
+                                    "Professor": a.professor,
+                                    "Dia": a.dia,
+                                    "Horário": f"{a.horario}º",
+                                    "Sala": a.sala,
+                                    "Grupo": a.grupo
+                                }
+                                for a in aulas
+                            ])
+                            
+                            # Ordenar por turma, dia e horário
+                            df_aulas = df_aulas.sort_values(["Turma", "Dia", "Horário"])
+                            
+                            # Exibir tabela
+                            st.dataframe(df_aulas, use_container_width=True)
+                            
+                            # Download da grade
+                            output = io.BytesIO()
+                            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                                df_aulas.to_excel(writer, sheet_name="Grade_Completa", index=False)
+                                
+                                # Adicionar estatísticas
+                                stats_df = pd.DataFrame({
+                                    "Estatística": ["Total de Aulas", "Professores Utilizados", "Turmas com Aula", "Método"],
+                                    "Valor": [len(aulas), professores_utilizados, turmas_utilizadas, metodo]
+                                })
+                                stats_df.to_excel(writer, sheet_name="Estatísticas", index=False)
+                            
+                            st.download_button(
+                                "📥 Baixar Grade em Excel",
+                                output.getvalue(),
+                                f"grade_{grupo_texto.replace(' ', '_')}.xlsx",
+                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            )
+                            
+                            # Visualização por turma
+                            st.subheader("👀 Visualização por Turma")
+                            
+                            turmas_com_aulas = sorted(set(a.turma for a in aulas))
+                            for turma_nome in turmas_com_aulas:
+                                with st.expander(f"Grade da Turma {turma_nome}", expanded=False):
+                                    aulas_turma = [a for a in aulas if a.turma == turma_nome]
+                                    
+                                    # Criar grade visual
+                                    dias = DIAS_SEMANA
+                                    horarios = HORARIOS_DISPONIVEIS
+                                    
+                                    grade_visual = {}
+                                    for horario in horarios:
+                                        grade_visual[horario] = {}
+                                        for dia in dias:
+                                            grade_visual[horario][dia] = ""
+                                    
+                                    for aula in aulas_turma:
+                                        if aula.dia in dias and aula.horario in horarios:
+                                            grade_visual[aula.horario][aula.dia] = f"{aula.disciplina}\n({aula.professor})"
+                                    
+                                    # Converter para DataFrame
+                                    df_grade = pd.DataFrame(grade_visual).T
+                                    df_grade.index = [f"{h}º Horário" for h in df_grade.index]
+                                    df_grade = df_grade.reindex(columns=dias)
+                                    
+                                    st.dataframe(df_grade, use_container_width=True)
+                        else:
+                            st.warning("⚠️ Nenhuma aula foi gerada. Verifique a configuração dos dados.")
+                            
                     except Exception as e:
                         st.error(f"❌ Erro ao gerar grade: {str(e)}")
+                        st.info("💡 Dicas para solucionar:")
+                        st.write("- Verifique se os professores têm as disciplinas corretas")
+                        st.write("- Confirme a disponibilidade dos professores")
+                        st.write("- Verifique se as disciplinas estão associadas às séries das turmas")
 
 # Sidebar
 st.sidebar.title("⚙️ Configurações")
@@ -487,4 +762,4 @@ st.sidebar.write("**Carga Horária Máxima:**")
 st.sidebar.write("- EF II: 25h semanais")
 st.sidebar.write("- EM: 32h semanais")
 st.sidebar.write("**Grupos Separados:**")
-st.sidebar.write- Cada turma só considera disciplinas do seu grupo")
+st.sidebar.write("- Cada turma só considera disciplinas do seu grupo")
