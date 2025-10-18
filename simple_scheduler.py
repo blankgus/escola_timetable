@@ -1,122 +1,118 @@
-from models import Aula, DIAS_SEMANA, HORARIOS_DISPONIVEIS
-from collections import defaultdict
 import random
-import streamlit as st
+from models import Aula
 
 class SimpleGradeHoraria:
     def __init__(self, turmas, professores, disciplinas):
         self.turmas = turmas
-        self.professores = {p.nome: p for p in professores}
-        self.disciplinas = {d.nome: d for d in disciplinas}
-        self.dias = DIAS_SEMANA
-        self.horarios = HORARIOS_DISPONIVEIS
+        self.professores = professores
+        self.disciplinas = disciplinas
+        self.aulas_alocadas = []
         
-        self.carga_turma = defaultdict(lambda: defaultdict(int))
-        for turma in turmas:
-            for nome_disc, disc in self.disciplinas.items():
-                if turma.serie in disc.series:
-                    self.carga_turma[turma.nome][nome_disc] = disc.carga_semanal
-
+    def obter_grupo_seguro(self, objeto):
+        try:
+            if hasattr(objeto, 'grupo'):
+                grupo = objeto.grupo
+                if grupo in ["A", "B", "AMBOS"]:
+                    return grupo
+            return "A"
+        except:
+            return "A"
+    
     def gerar_grade(self):
-        aulas = []
-        prof_aulas = defaultdict(list)
-        turma_aulas = defaultdict(list)
+        """Gera uma grade horária semanal tradicional"""
+        self.aulas_alocadas = []
         
-        # Criar lista de aulas pendentes
-        pendentes = []
-        for turma_nome in self.carga_turma:
-            for disc, carga in self.carga_turma[turma_nome].items():
-                for _ in range(carga):
-                    pendentes.append((turma_nome, disc))
+        # Dias da semana (segunda a sexta)
+        dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta']
+        # Horários disponíveis (apenas manhã - 7 horários)
+        horarios = [1, 2, 3, 4, 5, 6, 7]
         
-        if not pendentes:
-            st.warning("⚠️ Nenhuma aula pendente para alocar!")
-            return aulas
+        st.info(f"📋 Gerando grade semanal para {len(self.turmas)} turmas...")
         
-        st.info(f"📋 Alocando {len(pendentes)} aulas...")
+        progress_bar = st.progress(0)
         
-        # Embaralhar para tentativa mais aleatória
-        random.shuffle(pendentes)
-        
-        aulas_alocadas = 0
-        tentativas_maximas = 3
-        
-        for tentativa in range(tentativas_maximas):
-            st.write(f"🔧 Tentativa {tentativa + 1} de {tentativas_maximas}...")
+        # Para cada turma, criar grade semanal
+        for idx, turma in enumerate(self.turmas):
+            grupo_turma = self.obter_grupo_seguro(turma)
             
-            for turma_nome, disc_nome in pendentes:
-                if any(a.turma == turma_nome and a.disciplina == disc_nome for a in aulas):
-                    continue  # Já alocada
+            # CORREÇÃO CRÍTICA: Filtrar disciplinas APENAS do MESMO GRUPO
+            disciplinas_turma = []
+            for disc in self.disciplinas:
+                disc_grupo = self.obter_grupo_seguro(disc)
+                # SÓ inclui disciplinas do MESMO grupo
+                if turma.serie in disc.series and disc_grupo == grupo_turma:
+                    # Adiciona a disciplina repetidas vezes conforme carga semanal
+                    for _ in range(disc.carga_semanal):
+                        disciplinas_turma.append(disc)
+            
+            if not disciplinas_turma:
+                st.warning(f"⚠️ Turma {turma.nome} [{grupo_turma}] não tem disciplinas do seu grupo")
+                continue
+            
+            # Embaralhar disciplinas para distribuição
+            random.shuffle(disciplinas_turma)
+            
+            # Alocar aulas para esta turma
+            aulas_turma = self._alocar_turma_semanal(turma, disciplinas_turma, dias, horarios, grupo_turma)
+            self.aulas_alocadas.extend(aulas_turma)
+            
+            progress_bar.progress((idx + 1) / len(self.turmas))
+        
+        st.success(f"✅ Grade gerada com {len(self.aulas_alocadas)} aulas!")
+        return self.aulas_alocadas
+    
+    def _alocar_turma_semanal(self, turma, disciplinas_turma, dias, horarios, grupo_turma):
+        """Aloca aulas para uma turma na semana toda"""
+        aulas_turma = []
+        disciplinas_restantes = disciplinas_turma.copy()
+        
+        # Tentar alocar em cada dia e horário
+        for dia in dias:
+            for horario in horarios:
+                if not disciplinas_restantes:
+                    break
                 
-                atribuido = False
-                profs_possiveis = [p for p in self.professores.values() if disc_nome in p.disciplinas]
+                # Pegar próxima disciplina
+                disciplina = disciplinas_restantes[0]
                 
-                if not profs_possiveis:
-                    st.warning(f"⚠️ Nenhum professor disponível para {disc_nome} na turma {turma_nome}")
+                # VERIFICAÇÃO DE SEGURANÇA: garantir que é do mesmo grupo
+                disc_grupo = self.obter_grupo_seguro(disciplina)
+                if disc_grupo != grupo_turma:
+                    st.error(f"❌ ERRO CRÍTICO: Disciplina {disciplina.nome} [{disc_grupo}] para turma {turma.nome} [{grupo_turma}]")
+                    disciplinas_restantes.pop(0)
                     continue
                 
-                # Embaralhar professores e combinações
-                random.shuffle(profs_possiveis)
-                combinacoes = [(dia, h) for dia in self.dias for h in self.horarios]
-                random.shuffle(combinacoes)
+                # Encontrar professor compatível
+                professor = self._encontrar_professor_compativel(disciplina.nome, dia, horario, grupo_turma)
                 
-                for prof in profs_possiveis:
-                    for dia, horario in combinacoes:
-                        # Verificar disponibilidade do professor
-                        if dia not in prof.disponibilidade:
-                            continue
-                        
-                        # Verificar horário indisponível
-                        if f"{dia}_{horario}" in prof.horarios_indisponiveis:
-                            continue
-                        
-                        # Verificar conflitos
-                        conflito = False
-                        
-                        # Conflito com outras aulas do professor
-                        for a in prof_aulas[prof.nome]:
-                            if a.dia == dia and a.horario == horario:
-                                conflito = True
-                                break
-                        
-                        if conflito:
-                            continue
-                        
-                        # Conflito com outras aulas da turma
-                        for a in turma_aulas[turma_nome]:
-                            if a.dia == dia and a.horario == horario:
-                                conflito = True
-                                break
-                        
-                        if not conflito:
-                            # Encontrar sala disponível (simplificado)
-                            sala_nome = "Sala 1"
-                            grupo_turma = next((t.grupo for t in self.turmas if t.nome == turma_nome), "A")
-                            
-                            aula = Aula(turma_nome, disc_nome, prof.nome, dia, horario, sala_nome, grupo_turma)
-                            aulas.append(aula)
-                            prof_aulas[prof.nome].append(aula)
-                            turma_aulas[turma_nome].append(aula)
-                            aulas_alocadas += 1
-                            atribuido = True
-                            break
+                if professor:
+                    sala = self._encontrar_sala_disponivel(dia, horario)
                     
-                    if atribuido:
-                        break
-            
-            # Verificar se todas as aulas foram alocadas
-            if len(aulas) == len(pendentes):
-                st.success(f"✅ Todas as {len(aulas)} aulas alocadas com sucesso!")
-                break
-            else:
-                st.warning(f"⚠️ Tentativa {tentativa + 1}: {len(aulas)}/{len(pendentes)} aulas alocadas")
-                
-                # Limpar e tentar novamente
-                if tentativa < tentativas_maximas - 1:
-                    aulas = []
-                    prof_aulas = defaultdict(list)
-                    turma_aulas = defaultdict(list)
-                    aulas_alocadas = 0
+                    aula = Aula(
+                        turma=turma.nome,
+                        disciplina=disciplina.nome,
+                        professor=professor.nome,
+                        dia=dia,
+                        horario=horario,
+                        sala=sala,
+                        grupo=grupo_turma
+                    )
+                    
+                    aulas_turma.append(aula)
+                    disciplinas_restantes.pop(0)
         
-        st.info(f"📊 Resultado final: {len(aulas)}/{len(pendentes)} aulas alocadas")
-        return aulas
+        return aulas_turma
+    
+    def _encontrar_professor_compativel(self, disciplina_nome, dia, horario, grupo_turma):
+        """Encontra professor que atende TODOS os critérios"""
+        professores_candidatos = []
+        
+        for professor in self.professores:
+            professor_grupo = self.obter_grupo_seguro(professor)
+            
+            # CRITÉRIOS DE COMPATIBILIDADE:
+            # 1. Professor deve ministrar a disciplina
+            # 2. Professor deve estar disponível no dia
+            # 3. Professor não pode ter horário indisponível
+            # 4. Professor deve ser do MESMO grupo ou AMBOS
+           
