@@ -6,7 +6,6 @@ def init_db():
     conn = sqlite3.connect('escola.db')
     c = conn.cursor()
     
-    # ✅ RECRIAR TODAS AS TABELAS COM ESTRUTURA ATUALIZADA
     c.execute('''CREATE TABLE IF NOT EXISTS turmas (
         id TEXT PRIMARY KEY,
         nome TEXT UNIQUE,
@@ -68,13 +67,23 @@ def init_db():
     conn.commit()
     conn.close()
 
+def validar_grupo(grupo):
+    """Valida e corrige o valor do grupo"""
+    if grupo in ["A", "B", "AMBOS"]:
+        return grupo
+    elif isinstance(grupo, set):
+        return "A"  # Valor padrão se for um set
+    else:
+        return "A"  # Valor padrão
+
 def salvar_turmas(turmas):
     conn = sqlite3.connect('escola.db')
     c = conn.cursor()
     c.execute("DELETE FROM turmas")
     for t in turmas:
+        grupo_validado = validar_grupo(t.grupo)
         c.execute("INSERT INTO turmas VALUES (?, ?, ?, ?, ?)",
-                  (t.id, t.nome, t.serie, t.turno, t.grupo))
+                  (t.id, t.nome, t.serie, t.turno, grupo_validado))
     conn.commit()
     conn.close()
 
@@ -87,11 +96,10 @@ def carregar_turmas():
     
     turmas = []
     for r in rows:
-        # ✅ VERIFICAR SE TEM O CAMPO GRUPO (posição 4)
         if len(r) >= 5:
-            turmas.append(Turma(nome=r[1], serie=r[2], turno=r[3], grupo=r[4], id=r[0]))
+            grupo = validar_grupo(r[4])
+            turmas.append(Turma(nome=r[1], serie=r[2], turno=r[3], grupo=grupo, id=r[0]))
         else:
-            # Se não tem grupo, assume "A" como padrão
             turmas.append(Turma(nome=r[1], serie=r[2], turno=r[3], grupo="A", id=r[0]))
     return turmas
 
@@ -100,8 +108,9 @@ def salvar_professores(professores):
     c = conn.cursor()
     c.execute("DELETE FROM professores")
     for p in professores:
+        grupo_validado = validar_grupo(p.grupo)
         c.execute("INSERT INTO professores VALUES (?, ?, ?, ?, ?)",
-                  (p.id, p.nome, json.dumps(p.disciplinas), json.dumps(list(p.disponibilidade)), p.grupo))
+                  (p.id, p.nome, json.dumps(p.disciplinas), json.dumps(list(p.disponibilidade)), grupo_validado))
     conn.commit()
     conn.close()
 
@@ -115,15 +124,15 @@ def carregar_professores():
     professores = []
     for r in rows:
         if len(r) >= 5:
+            grupo = validar_grupo(r[4])
             professores.append(Professor(
                 nome=r[1], 
                 disciplinas=json.loads(r[2]), 
                 disponibilidade=set(json.loads(r[3])), 
-                grupo=r[4],
+                grupo=grupo,
                 id=r[0]
             ))
         else:
-            # Se não tem grupo, assume "A" como padrão
             professores.append(Professor(
                 nome=r[1], 
                 disciplinas=json.loads(r[2]), 
@@ -138,8 +147,9 @@ def salvar_disciplinas(disciplinas):
     c = conn.cursor()
     c.execute("DELETE FROM disciplinas")
     for d in disciplinas:
+        grupo_validado = validar_grupo(d.grupo)
         c.execute("INSERT INTO disciplinas VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                  (d.id, d.nome, d.carga_semanal, d.tipo, json.dumps(d.series), d.grupo, d.cor_fundo, d.cor_fonte))
+                  (d.id, d.nome, d.carga_semanal, d.tipo, json.dumps(d.series), grupo_validado, d.cor_fundo, d.cor_fonte))
     conn.commit()
     conn.close()
 
@@ -152,27 +162,29 @@ def carregar_disciplinas():
     
     disciplinas = []
     for r in rows:
-        if len(r) >= 8:  # Tem todos os campos incluindo cores
+        if len(r) >= 8:
+            grupo = validar_grupo(r[5])
             disciplinas.append(Disciplina(
                 nome=r[1], 
                 carga_semanal=r[2], 
                 tipo=r[3], 
                 series=json.loads(r[4]), 
-                grupo=r[5],
+                grupo=grupo,
                 cor_fundo=r[6],
                 cor_fonte=r[7],
                 id=r[0]
             ))
-        elif len(r) >= 6:  # Tem grupo mas não tem cores
+        elif len(r) >= 6:
+            grupo = validar_grupo(r[5])
             disciplinas.append(Disciplina(
                 nome=r[1], 
                 carga_semanal=r[2], 
                 tipo=r[3], 
                 series=json.loads(r[4]), 
-                grupo=r[5],
+                grupo=grupo,
                 id=r[0]
             ))
-        else:  # Estrutura antiga
+        else:
             disciplinas.append(Disciplina(
                 nome=r[1], 
                 carga_semanal=r[2], 
@@ -242,8 +254,9 @@ def salvar_grade(aulas):
     c = conn.cursor()
     c.execute("DELETE FROM aulas")
     for aula in aulas:
+        grupo_validado = validar_grupo(aula.grupo)
         c.execute("INSERT INTO aulas VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                  (aula.id, aula.turma, aula.disciplina, aula.professor, aula.dia, aula.horario, aula.sala, aula.grupo))
+                  (aula.id, aula.turma, aula.disciplina, aula.professor, aula.dia, aula.horario, aula.sala, grupo_validado))
     conn.commit()
     conn.close()
 
@@ -256,7 +269,8 @@ def carregar_grade():
     
     aulas = []
     for r in rows:
-        if len(r) >= 8:  # Tem grupo
+        if len(r) >= 8:
+            grupo = validar_grupo(r[7])
             aulas.append(Aula(
                 turma=r[1], 
                 disciplina=r[2], 
@@ -264,10 +278,10 @@ def carregar_grade():
                 dia=r[4], 
                 horario=r[5], 
                 sala=r[6],
-                grupo=r[7],
+                grupo=grupo,
                 id=r[0]
             ))
-        else:  # Estrutura antiga
+        else:
             aulas.append(Aula(
                 turma=r[1], 
                 disciplina=r[2], 
@@ -275,13 +289,13 @@ def carregar_grade():
                 dia=r[4], 
                 horario=r[5], 
                 sala=r[6],
-                grupo="A",  # Assume grupo A
+                grupo="A",
                 id=r[0]
             ))
     return aulas
 
 def resetar_banco():
-    """Função para resetar completamente o banco de dados (útil para desenvolvimento)"""
+    """Função para resetar completamente o banco de dados"""
     import os
     if os.path.exists('escola.db'):
         os.remove('escola.db')
