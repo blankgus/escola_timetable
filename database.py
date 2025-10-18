@@ -19,7 +19,8 @@ def init_db():
         nome TEXT UNIQUE,
         disciplinas TEXT,
         disponibilidade TEXT,
-        grupo TEXT
+        grupo TEXT,
+        horarios_indisponiveis TEXT
     )''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS disciplinas (
@@ -68,13 +69,12 @@ def init_db():
     conn.close()
 
 def validar_grupo(grupo):
-    """Valida e corrige o valor do grupo"""
     if grupo in ["A", "B", "AMBOS"]:
         return grupo
     elif isinstance(grupo, set):
-        return "A"  # Valor padrão se for um set
+        return "A"
     else:
-        return "A"  # Valor padrão
+        return "A"
 
 def salvar_turmas(turmas):
     conn = sqlite3.connect('escola.db')
@@ -109,8 +109,10 @@ def salvar_professores(professores):
     c.execute("DELETE FROM professores")
     for p in professores:
         grupo_validado = validar_grupo(p.grupo)
-        c.execute("INSERT INTO professores VALUES (?, ?, ?, ?, ?)",
-                  (p.id, p.nome, json.dumps(p.disciplinas), json.dumps(list(p.disponibilidade)), grupo_validado))
+        c.execute("INSERT INTO professores VALUES (?, ?, ?, ?, ?, ?)",
+                  (p.id, p.nome, json.dumps(p.disciplinas), 
+                   json.dumps(list(p.disponibilidade)), grupo_validado,
+                   json.dumps(list(p.horarios_indisponiveis))))
     conn.commit()
     conn.close()
 
@@ -123,13 +125,15 @@ def carregar_professores():
     
     professores = []
     for r in rows:
-        if len(r) >= 5:
+        if len(r) >= 6:
             grupo = validar_grupo(r[4])
+            horarios_indisponiveis = set(json.loads(r[5])) if r[5] else set()
             professores.append(Professor(
                 nome=r[1], 
                 disciplinas=json.loads(r[2]), 
                 disponibilidade=set(json.loads(r[3])), 
                 grupo=grupo,
+                horarios_indisponiveis=horarios_indisponiveis,
                 id=r[0]
             ))
         else:
@@ -138,6 +142,7 @@ def carregar_professores():
                 disciplinas=json.loads(r[2]), 
                 disponibilidade=set(json.loads(r[3])), 
                 grupo="A",
+                horarios_indisponiveis=set(),
                 id=r[0]
             ))
     return professores
@@ -295,7 +300,6 @@ def carregar_grade():
     return aulas
 
 def resetar_banco():
-    """Função para resetar completamente o banco de dados"""
     import os
     if os.path.exists('escola.db'):
         os.remove('escola.db')

@@ -1,15 +1,14 @@
-from models import Aula, DIAS_SEMANA
+from models import Aula, DIAS_SEMANA, HORARIOS_DISPONIVEIS
 from collections import defaultdict
 import random
-import streamlit as st
 
 class SimpleGradeHoraria:
     def __init__(self, turmas, professores, disciplinas):
         self.turmas = turmas
         self.professores = {p.nome: p for p in professores}
         self.disciplinas = {d.nome: d for d in disciplinas}
-        self.dias = DIAS_SEMANA  # 7 dias
-        self.horarios = [1, 2, 3, 5, 6, 7]  # Sem recreio
+        self.dias = DIAS_SEMANA
+        self.horarios = HORARIOS_DISPONIVEIS
         
         self.carga_turma = defaultdict(lambda: defaultdict(int))
         for turma in turmas:
@@ -40,7 +39,12 @@ class SimpleGradeHoraria:
                 random.shuffle(combinacoes)
                 
                 for dia, horario in combinacoes:
+                    # Verificar disponibilidade
                     if dia not in prof.disponibilidade:
+                        continue
+                    
+                    # Verificar horário indisponível
+                    if f"{dia}_{horario}" in prof.horarios_indisponiveis:
                         continue
                     
                     conflito = False
@@ -54,9 +58,8 @@ class SimpleGradeHoraria:
                             break
                     
                     if not conflito:
-                        salas = st.session_state.salas if 'salas' in st.session_state else []
-                        sala_nome = salas[0].nome if salas else "Sala 1"
-                        aula = Aula(turma_nome, disc_nome, prof.nome, dia, horario, sala_nome)
+                        grupo_turma = next((t.grupo for t in self.turmas if t.nome == turma_nome), "A")
+                        aula = Aula(turma_nome, disc_nome, prof.nome, dia, horario, "Sala 1", grupo_turma)
                         aulas.append(aula)
                         prof_aulas[prof.nome].append(aula)
                         turma_aulas[turma_nome].append(aula)
@@ -70,9 +73,8 @@ class SimpleGradeHoraria:
                 prof = profs_possiveis[0]
                 dia = list(prof.disponibilidade)[0] if prof.disponibilidade else "seg"
                 horario = self.horarios[0]
-                salas = st.session_state.salas if 'salas' in st.session_state else []
-                sala_nome = salas[0].nome if salas else "Sala 1"
-                aula = Aula(turma_nome, disc_nome, prof.nome, dia, horario, sala_nome)
+                grupo_turma = next((t.grupo for t in self.turmas if t.nome == turma_nome), "A")
+                aula = Aula(turma_nome, disc_nome, prof.nome, dia, horario, "Sala 1", grupo_turma)
                 aulas.append(aula)
         
         return aulas

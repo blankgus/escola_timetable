@@ -1,7 +1,6 @@
 from ortools.sat.python import cp_model
-from neuro_rules import eh_horario_ideal
 from collections import defaultdict
-from models import Aula, DIAS_SEMANA
+from models import Aula, DIAS_SEMANA, HORARIOS_DISPONIVEIS
 import streamlit as st
 
 class GradeHorariaORTools:
@@ -9,11 +8,11 @@ class GradeHorariaORTools:
         self.turmas = turmas
         self.professores = professores
         self.disciplinas = {d.nome: d for d in disciplinas}
-        self.dias = DIAS_SEMANA  # 7 dias: dom a sab
-        self.horarios = [1, 2, 3, 5, 6, 7]  # Sem recreio (horário 4)
+        self.dias = DIAS_SEMANA
+        self.horarios = HORARIOS_DISPONIVEIS
         self.model = cp_model.CpModel()
         self.solver = cp_model.CpSolver()
-        self.solver.parameters.max_time_in_seconds = 10.0
+        self.solver.parameters.max_time_in_seconds = 30.0
         self.relaxar_horario_ideal = relaxar_horario_ideal
 
         self.turma_idx = {t.nome: i for i, t in enumerate(turmas)}
@@ -39,76 +38,74 @@ class GradeHorariaORTools:
         for turma_nome, disciplinas in self.disciplinas_por_turma.items():
             for disc_nome in set(disciplinas):
                 for dia in self.dias:
-                    for horario in self.horarios:  # Já exclui horário 4
-                        profs_validos = [
-                            p.nome for p in self.professores
-                            if disc_nome in p.disciplinas and dia in p.disponibilidade
-                        ]
+                    for horario in self.horarios:
+                        profs_validos = []
+                        for p in self.professores:
+                            horario_indisponivel = f"{dia}_{horario}" in p.horarios_indisponiveis
+                            if (disc_nome in p.disciplinas and 
+                                dia in p.disponibilidade and
+                                not horario_indisponivel):
+                                profs_validos.append(p.nome)
+                        
                         if profs_validos:
                             self.atribuicoes_prof[(turma_nome, disc_nome, dia, horario)] = profs_validos
 
     def _criar_variaveis(self):
-        for turma_nome, disciplinas in self.disciplinas_por_turma.items():
-            contagem = defaultdict(int)
-            for d in disciplinas:
-                contagem[d] += 1
-
-            for disc_nome, total in contagem.items():
-                vars_disc = []
-                for dia in self.dias:
-                    for horario in self.horarios:
-                        if (turma_nome, disc_nome, dia, horario) in self.atribuicoes_prof:
-                            var = self.model.NewBoolVar(f"x_{turma_nome}_{disc_nome}_{dia}_{horario}")
-                            self.variaveis[(turma_nome, disc_nome, dia, horario)] = var
-                            vars_disc.append(var)
-                
-                if not vars_disc:
-                    raise Exception(f"Sem atribuições possíveis para {turma_nome} - {disc_nome}")
-                self.model.Add(sum(vars_disc) == total)
+        for (turma, disc, dia, horario), profs in self.atribuicoes_prof.items():
+            for prof in profs:
+                var = self.model.NewBoolVar(f'aula_{turma}_{disc}_{dia}_{horario}_{prof}')
+                self.variaveis[(turma, disc, dia, horario, prof)] = var
 
     def _adicionar_restricoes(self):
-        for turma_nome in self.turma_idx:
-            for dia in self.dias:
-                for horario in self.horarios:
-                    vars_horario = [
-                        var for (t, d, d2, h2), var in self.variaveis.items()
-                        if t == turma_nome and d2 == dia and h2 == horario
-                    ]
-                    if vars_horario:
-                        self.model.Add(sum(vars_horario) <= 1)
+        # 1. Cada aula deve ser atribuída
+        for turma_nome, disciplinas in self.disciplinas_por_turma.items():
+            disc_contagem = defaultdict(int)
+            for d in disciplinas:
+                disc_contagem[d] += 1
+            
+            for disc_nome, total in disc_contagem.items():
+                vars_disc = []
+                for (t, d, di, h, p), var in self.variaveis.items():
+                    if t == turma_nome and d == disc_nome:
+                        vars_disc.append(var)
+                if vars_disc:
+                    self.model.Add(sum(vars_disc) == total)
 
+        # 2. Professor não pode dar duas aulas ao mesmo tempo
         for prof in self.professores:
             for dia in self.dias:
-                if dia not in prof.disponibilidade:
-                    continue
                 for horario in self.horarios:
                     vars_prof = []
-                    for (t, d, d2, h2), var in self.variaveis.items():
-                        if d2 == dia and h2 == horario:
-                            if d in prof.disciplinas:
-                                vars_prof.append(var)
-                    if vars_prof:
+                    for (t, d, di, h, p), var in self.variaveis.items():
+                        if p == prof.nome and di == dia and h == horario:
+                            vars_prof.append(var)
+                    if len(vars_prof) > 1:
                         self.model.Add(sum(vars_prof) <= 1)
 
+        # 3. Turma não pode ter duas aulas ao mesmo tempo
+        for turma in self.turmas:
+            for dia in self.dias:
+                for horario in self.horarios:
+                    vars_turma = []
+                    for (t, d, di, h, p), var in self.variaveis.items():
+                        if t == turma.nome and di == dia and h == horario:
+                            vars_turma.append(var)
+                    if len(vars_turma) > 1:
+                        self.model.Add(sum(vars_turma) <= 1)
+
     def resolver(self):
-        if not self.relaxar_horario_ideal:
-            objetivo = []
-            for (turma, disc, dia, horario), var in self.variaveis.items():
-                if eh_horario_ideal(self.disciplinas[disc].tipo, horario):
-                    objetivo.append(var)
-            self.model.Maximize(sum(objetivo))
-        
         status = self.solver.Solve(self.model)
+        aulas = []
         
-        if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-            aulas = []
-            for (turma, disc, dia, horario), var in self.variaveis.items():
-                if self.solver.BooleanValue(var):
-                    profs = self.atribuicoes_prof.get((turma, disc, dia, horario), [])
-                    salas = st.session_state.salas if 'salas' in st.session_state else []
-                    sala_nome = salas[0].nome if salas else "Sala 1"
-                    if profs:
-                        aulas.append(Aula(turma, disc, profs[0], dia, horario, sala_nome))
-            return aulas
+        if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+            for (turma, disc, dia, horario, prof), var in self.variaveis.items():
+                if self.solver.Value(var) == 1:
+                    grupo_turma = next((t.grupo for t in self.turmas if t.nome == turma), "A")
+                    aulas.append(Aula(turma, disc, prof, dia, horario, "Sala 1", grupo_turma))
+            
+            st.success(f"✅ Solução encontrada: {len(aulas)} aulas alocadas")
         else:
-            raise Exception("❌ Nenhuma solução viável encontrada.")
+            st.error("❌ Nenhuma solução viável encontrada")
+            aulas = []
+        
+        return aulas
