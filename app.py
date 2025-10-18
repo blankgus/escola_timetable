@@ -4,8 +4,6 @@ import database
 from session_state import init_session_state
 from auto_save import salvar_tudo
 from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA, HORARIOS_DISPONIVEIS
-from scheduler_ortools import GradeHorariaORTools
-from simple_scheduler import SimpleGradeHoraria
 import io
 
 # Configuração da página
@@ -50,7 +48,7 @@ with abas[0]:  # ABA INÍCIO
     with col4:
         st.metric("Salas", len(st.session_state.salas))
     
-    # Estatísticas
+    # Estatísticas por grupo
     turmas_a = [t for t in st.session_state.turmas if obter_grupo_seguro(t) == "A"]
     turmas_b = [t for t in st.session_state.turmas if obter_grupo_seguro(t) == "B"]
     
@@ -74,7 +72,7 @@ with abas[1]:  # ABA DISCIPLINAS
     
     grupo_filtro = st.selectbox("Filtrar por Grupo", ["Todos", "A", "B"], key="filtro_disc")
     
-    # ✅ BOTÃO ADICIONAR DISCIPLINA
+    # ✅ ADICIONAR DISCIPLINA
     with st.expander("➕ Adicionar Nova Disciplina", expanded=False):
         with st.form("add_disc"):
             col1, col2 = st.columns(2)
@@ -167,7 +165,7 @@ with abas[2]:  # ABA PROFESSORES
     grupo_filtro = st.selectbox("Filtrar por Grupo", ["Todos", "A", "B", "AMBOS"], key="filtro_prof")
     disc_nomes = [d.nome for d in st.session_state.disciplinas]
     
-    # ✅ BOTÃO ADICIONAR PROFESSOR
+    # ✅ ADICIONAR PROFESSOR
     with st.expander("➕ Adicionar Novo Professor", expanded=False):
         with st.form("add_prof"):
             col1, col2 = st.columns(2)
@@ -179,7 +177,7 @@ with abas[2]:  # ABA PROFESSORES
                 disponibilidade = st.multiselect("Dias Disponíveis*", DIAS_SEMANA, default=DIAS_SEMANA)
                 st.write("**Horários Indisponíveis:**")
                 
-                # ✅ HORÁRIOS INDISPONÍVEIS POR DIA
+                # ✅ HORÁRIOS INDISPONÍVEIS
                 horarios_indisponiveis = []
                 for dia in DIAS_SEMANA:
                     with st.container():
@@ -289,7 +287,7 @@ with abas[3]:  # ABA TURMAS
     
     grupo_filtro = st.selectbox("Filtrar por Grupo", ["Todos", "A", "B"], key="filtro_turma")
     
-    # ✅ BOTÃO ADICIONAR TURMA
+    # ✅ ADICIONAR TURMA
     with st.expander("➕ Adicionar Nova Turma", expanded=False):
         with st.form("add_turma"):
             col1, col2 = st.columns(2)
@@ -368,7 +366,7 @@ with abas[3]:  # ABA TURMAS
 with abas[4]:  # ABA SALAS
     st.header("🏫 Salas")
     
-    # ✅ BOTÃO ADICIONAR SALA
+    # ✅ ADICIONAR SALA
     with st.expander("➕ Adicionar Nova Sala", expanded=False):
         with st.form("add_sala"):
             col1, col2 = st.columns(2)
@@ -511,84 +509,10 @@ with abas[5]:  # ABA GERAR GRADE
     else:
         st.success("✅ Capacidade suficiente para gerar grade!")
     
-    # ✅ BOTÃO GERAR GRADE
+    # ✅ BOTÃO GERAR GRADE (funcionalidade básica por enquanto)
     if st.button("🚀 Gerar Grade Horária", type="primary", use_container_width=True):
-        with st.spinner(f"Gerando grade para {grupo_texto}..."):
-            try:
-                # Filtrar professores conforme o tipo de grade
-                if tipo_grade == "Grade por Grupo A (Manhã)":
-                    professores_filtrados = [p for p in st.session_state.professores if obter_grupo_seguro(p) in ["A", "AMBOS"]]
-                elif tipo_grade == "Grade por Grupo B (Tarde)":
-                    professores_filtrados = [p for p in st.session_state.professores if obter_grupo_seguro(p) in ["B", "AMBOS"]]
-                elif tipo_grade == "Grade por Professor Específico":
-                    professores_filtrados = [p for p in st.session_state.professores if p.nome == professor_selecionado]
-                    turmas_filtradas = st.session_state.turmas  # Para grade de professor, usar todas as turmas
-                else:
-                    professores_filtrados = st.session_state.professores
-                
-                # Escolher algoritmo
-                if tipo_algoritmo == "Google OR-Tools (Recomendado)":
-                    grade = GradeHorariaORTools(
-                        turmas_filtradas,
-                        professores_filtrados,
-                        disciplinas_filtradas,
-                        relaxar_horario_ideal=relaxar_horarios
-                    )
-                    aulas = grade.resolver()
-                    metodo = "Google OR-Tools"
-                else:
-                    simple_grade = SimpleGradeHoraria(
-                        turmas_filtradas,
-                        professores_filtrados,
-                        disciplinas_filtradas
-                    )
-                    aulas = simple_grade.gerar_grade()
-                    metodo = "Algoritmo Simples"
-                
-                # Filtrar aulas se for grade específica
-                if tipo_grade == "Grade por Turma Específica":
-                    aulas = [a for a in aulas if a.turma == turma_selecionada]
-                elif tipo_grade == "Grade por Professor Específico":
-                    aulas = [a for a in aulas if a.professor == professor_selecionado]
-                
-                st.session_state.aulas = aulas
-                if salvar_tudo():
-                    st.success(f"✅ Grade {grupo_texto} gerada com {metodo}! ({len(aulas)} aulas)")
-                
-                # Exibir grade gerada
-                st.subheader("📋 Grade Gerada")
-                if aulas:
-                    df = pd.DataFrame([
-                        {
-                            "Turma": a.turma,
-                            "Disciplina": a.disciplina, 
-                            "Professor": a.professor,
-                            "Dia": a.dia,
-                            "Horário": f"{a.horario}º",
-                            "Sala": a.sala,
-                            "Grupo": a.grupo
-                        }
-                        for a in aulas
-                    ])
-                    st.dataframe(df, use_container_width=True)
-                    
-                    # Download da grade
-                    output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                        df.to_excel(writer, sheet_name="Grade_Completa", index=False)
-                    
-                    st.download_button(
-                        "📥 Baixar Grade em Excel",
-                        output.getvalue(),
-                        f"grade_{grupo_texto.replace(' ', '_')}.xlsx",
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-                else:
-                    st.warning("⚠️ Nenhuma aula foi gerada.")
-                    
-            except Exception as e:
-                st.error(f"❌ Erro ao gerar grade: {str(e)}")
-                st.info("💡 Tente ajustar as configurações ou usar o algoritmo simples.")
+        st.info("🔧 Funcionalidade de geração de grade em desenvolvimento...")
+        st.info("Por enquanto, use os formulários acima para cadastrar seus dados.")
 
 # Sidebar
 st.sidebar.title("⚙️ Configurações")
@@ -601,4 +525,4 @@ st.sidebar.write(f"**Turmas:** {len(st.session_state.turmas)}")
 st.sidebar.write(f"**Professores:** {len(st.session_state.professores)}")
 st.sidebar.write(f"**Disciplinas:** {len(st.session_state.disciplinas)}")
 st.sidebar.write(f"**Salas:** {len(st.session_state.salas)}")
-st.sidebar.write(f"**Aulas na Grade:** {len(st.session_state.aulas)}")
+st.sidebar.write(f"**Aulas na Grade:** {len(st.session_state.get('aulas', []))}")
