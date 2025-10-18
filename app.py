@@ -34,6 +34,14 @@ def obter_grupo_seguro(objeto, opcoes=["A", "B", "AMBOS"]):
     except:
         return "A"
 
+# Função para calcular carga horária máxima por série
+def calcular_carga_maxima(serie):
+    """Calcula a carga horária máxima semanal baseada na série"""
+    if 'em' in serie.lower() or 'medio' in serie.lower() or serie in ['1em', '2em', '3em']:
+        return 32  # Ensino Médio: 32 horas
+    else:
+        return 25  # EF II: 25 horas
+
 # Menu de abas
 abas = st.tabs(["🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas", "🏫 Salas", "🗓️ Gerar Grade"])
 
@@ -64,6 +72,24 @@ with abas[0]:  # ABA INÍCIO
         st.write("**Grupo B**")
         st.write(f"Turmas: {len(turmas_b)}")
         st.write(f"Disciplinas: {len([d for d in st.session_state.disciplinas if obter_grupo_seguro(d) == 'B'])}")
+    
+    # Verificação de carga horária
+    st.subheader("📈 Verificação de Carga Horária")
+    for turma in st.session_state.turmas:
+        carga_total = 0
+        disciplinas_turma = []
+        
+        for disc in st.session_state.disciplinas:
+            if turma.serie in disc.series:
+                carga_total += disc.carga_semanal
+                disciplinas_turma.append(f"{disc.nome} ({disc.carga_semanal}h)")
+        
+        carga_maxima = calcular_carga_maxima(turma.serie)
+        status = "✅" if carga_total <= carga_maxima else "❌"
+        
+        st.write(f"**{turma.nome}** ({turma.serie}): {carga_total}/{carga_maxima}h {status}")
+        if disciplinas_turma:
+            st.caption(f"Disciplinas: {', '.join(disciplinas_turma)}")
     
     if st.button("💾 Salvar Tudo no Banco"):
         if salvar_tudo():
@@ -296,6 +322,12 @@ with abas[3]:  # ABA TURMAS
                 turno = st.selectbox("Turno*", ["manha"], disabled=True)
                 grupo = st.selectbox("Grupo*", ["A", "B"])
             
+            # Mostrar carga horária máxima baseada na série
+            if serie:
+                carga_maxima = calcular_carga_maxima(serie)
+                nivel = "Ensino Médio" if carga_maxima == 32 else "EF II"
+                st.info(f"💡 {nivel}: Carga horária máxima semanal = {carga_maxima}h")
+            
             if st.form_submit_button("✅ Adicionar Turma"):
                 if nome and serie:
                     nova_turma = Turma(nome, serie, "manha", grupo)
@@ -331,6 +363,19 @@ with abas[3]:  # ABA TURMAS
                         index=0 if obter_grupo_seguro(turma) == "A" else 1,
                         key=f"grupo_turma_{turma.id}"
                     )
+                
+                # Mostrar estatísticas atuais da turma
+                carga_atual = 0
+                disciplinas_turma = []
+                for disc in st.session_state.disciplinas:
+                    if turma.serie in disc.series:
+                        carga_atual += disc.carga_semanal
+                        disciplinas_turma.append(disc.nome)
+                
+                carga_maxima = calcular_carga_maxima(turma.serie)
+                st.write(f"**Carga horária atual:** {carga_atual}/{carga_maxima}h")
+                if disciplinas_turma:
+                    st.caption(f"Disciplinas: {', '.join(disciplinas_turma)}")
                 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -478,14 +523,24 @@ with abas[5]:  # ABA GERAR GRADE
     # Calcular total de aulas necessárias
     total_aulas = 0
     aulas_por_turma = {}
+    problemas_carga = []
     
     for turma in turmas_filtradas:
         aulas_turma = 0
+        disciplinas_turma = []
+        
         for disc in disciplinas_filtradas:
             if turma.serie in disc.series:
                 aulas_turma += disc.carga_semanal
                 total_aulas += disc.carga_semanal
+                disciplinas_turma.append(disc.nome)
+        
         aulas_por_turma[turma.nome] = aulas_turma
+        
+        # Verificar se excede carga máxima
+        carga_maxima = calcular_carga_maxima(turma.serie)
+        if aulas_turma > carga_maxima:
+            problemas_carga.append(f"{turma.nome}: {aulas_turma}h > {carga_maxima}h máximo")
     
     capacidade_total = len(DIAS_SEMANA) * len(HORARIOS_DISPONIVEIS) * len(turmas_filtradas)
     
@@ -497,6 +552,13 @@ with abas[5]:  # ABA GERAR GRADE
     with col3:
         st.metric("Capacidade Disponível", capacidade_total)
     
+    # Mostrar problemas de carga horária
+    if problemas_carga:
+        st.error("❌ Problemas de carga horária detectados:")
+        for problema in problemas_carga:
+            st.write(f"- {problema}")
+        st.info("💡 **Solução:** Reduza a carga horária das disciplinas ou ajuste as séries")
+    
     # Verificar viabilidade
     if total_aulas == 0:
         st.error("❌ Nenhuma aula para alocar! Verifique se as disciplinas estão associadas às séries corretas.")
@@ -504,7 +566,11 @@ with abas[5]:  # ABA GERAR GRADE
         st.error("❌ Capacidade insuficiente! Reduza a carga horária.")
         st.write("**Aulas por turma:**")
         for turma, aulas in aulas_por_turma.items():
-            st.write(f"- {turma}: {aulas} aulas")
+            carga_maxima = calcular_carga_maxima(next(t for t in turmas_filtradas if t.nome == turma).serie)
+            status = "✅" if aulas <= carga_maxima else "❌"
+            st.write(f"- {turma}: {aulas}/{carga_maxima}h {status}")
+    elif problemas_carga:
+        st.error("❌ Corrija os problemas de carga horária antes de gerar a grade!")
     else:
         st.success("✅ Capacidade suficiente para gerar grade!")
         
@@ -514,6 +580,8 @@ with abas[5]:  # ABA GERAR GRADE
                 st.error("❌ Nenhuma turma selecionada para gerar grade!")
             elif not disciplinas_filtradas:
                 st.error("❌ Nenhuma disciplina disponível para as turmas selecionadas!")
+            elif problemas_carga:
+                st.error("❌ Corrija os problemas de carga horária antes de gerar!")
             else:
                 with st.spinner(f"Gerando grade para {grupo_texto}..."):
                     try:
@@ -662,17 +730,22 @@ with abas[5]:  # ABA GERAR GRADE
     with st.expander("🔍 Diagnóstico de Problemas", expanded=False):
         st.write("**Problemas comuns e soluções:**")
         
-        st.write("1. **Nenhuma aula gerada:**")
+        st.write("1. **Carga horária excessiva:**")
+        st.write("   - EF II: máximo 25h semanais")
+        st.write("   - EM: máximo 32h semanais")
+        st.write("   - Reduza a carga horária das disciplinas problemáticas")
+        
+        st.write("2. **Nenhuma aula gerada:**")
         st.write("   - Verifique se as disciplinas estão associadas às séries das turmas")
         st.write("   - Confirme que os professores têm as disciplinas necessárias")
         st.write("   - Verifique a disponibilidade dos professores")
         
-        st.write("2. **Capacidade insuficiente:**")
+        st.write("3. **Capacidade insuficiente:**")
         st.write("   - Reduza a carga horária das disciplinas")
         st.write("   - Aumente os dias de aula disponíveis")
         st.write("   - Adicione mais horários disponíveis")
         
-        st.write("3. **Professores sobrecarregados:**")
+        st.write("4. **Professores sobrecarregados:**")
         st.write("   - Verifique os horários indisponíveis dos professores")
         st.write("   - Distribua melhor as disciplinas entre os professores")
         
@@ -694,3 +767,8 @@ st.sidebar.write(f"**Professores:** {len(st.session_state.professores)}")
 st.sidebar.write(f"**Disciplinas:** {len(st.session_state.disciplinas)}")
 st.sidebar.write(f"**Salas:** {len(st.session_state.salas)}")
 st.sidebar.write(f"**Aulas na Grade:** {len(st.session_state.get('aulas', []))}")
+
+st.sidebar.write("### 💡 Informações:")
+st.sidebar.write("**Carga Horária Máxima:**")
+st.sidebar.write("- EF II: 25h semanais")
+st.sidebar.write("- EM: 32h semanais")
