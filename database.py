@@ -8,7 +8,7 @@ DB_FILE = "escola_database.json"
 def criar_dados_iniciais():
     """Cria dados iniciais para teste"""
     
-    # Professores reais que você forneceu
+    # Professores reais
     professores = [
         Professor("Heliana", ["Português"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
         Professor("Deise", ["Português"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
@@ -30,57 +30,7 @@ def criar_dados_iniciais():
         Professor("Andréia Barreto", ["Dinâmica", "Vida Pratica"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
     ]
     
-    # Disciplinas básicas para EF II e EM
-    disciplinas = [
-        # EF II - Grupo A
-        Disciplina("Português A", 5, "pesada", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("Matemática A", 5, "pesada", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("História A", 2, "media", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("Geografia A", 2, "media", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("Ciências A", 3, "media", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("Inglês A", 2, "leve", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("Arte A", 2, "leve", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("Educação Física A", 2, "pratica", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        
-        # EF II - Grupo B
-        Disciplina("Português B", 5, "pesada", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        Disciplina("Matemática B", 5, "pesada", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        Disciplina("História B", 2, "media", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        Disciplina("Geografia B", 2, "media", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        Disciplina("Ciências B", 3, "media", ["6ano", "7ano", "8ano", "9ano"], "B"),  # ✅ CORRIGIDO
-        Disciplina("Inglês B", 2, "leve", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        Disciplina("Arte B", 2, "leve", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        Disciplina("Educação Física B", 2, "pratica", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        
-        # EM - Grupo A
-        Disciplina("Português A", 5, "pesada", ["1em", "2em", "3em"], "A"),
-        Disciplina("Matemática A", 5, "pesada", ["1em", "2em", "3em"], "A"),
-        Disciplina("História A", 3, "media", ["1em", "2em", "3em"], "A"),
-        Disciplina("Geografia A", 3, "media", ["1em", "2em", "3em"], "A"),
-        Disciplina("Biologia A", 3, "media", ["1em", "2em", "3em"], "A"),
-        Disciplina("Física A", 3, "pesada", ["1em", "2em", "3em"], "A"),
-        Disciplina("Química A", 3, "pesada", ["1em", "2em", "3em"], "A"),
-        Disciplina("Inglês A", 2, "leve", ["1em", "2em", "3em"], "A"),
-        Disciplina("Arte A", 1, "leve", ["1em", "2em", "3em"], "A"),
-        Disciplina("Educação Física A", 2, "pratica", ["1em", "2em", "3em"], "A"),
-        Disciplina("Filosofia A", 2, "media", ["1em", "2em", "3em"], "A"),
-        Disciplina("Sociologia A", 2, "media", ["1em", "2em", "3em"], "A"),
-        
-        # EM - Grupo B
-        Disciplina("Português B", 5, "pesada", ["1em", "2em", "3em"], "B"),
-        Disciplina("Matemática B", 5, "pesada", ["1em", "2em", "3em"], "B"),
-        Disciplina("História B", 3, "media", ["1em", "2em", "3em"], "B"),
-        Disciplina("Geografia B", 3, "media", ["1em", "2em", "3em"], "B"),
-        Disciplina("Biologia B", 3, "media", ["1em", "2em", "3em"], "B"),
-        Disciplina("Física B", 3, "pesada", ["1em", "2em", "3em"], "B"),
-        Disciplina("Química B", 3, "pesada", ["1em", "2em", "3em"], "B"),
-        Disciplina("Inglês B", 2, "leve", ["1em", "2em", "3em"], "B"),
-        Disciplina("Arte B", 1, "leve", ["1em", "2em", "3em"], "B"),
-        Disciplina("Educação Física B", 2, "pratica", ["1em", "2em", "3em"], "B"),
-        Disciplina("Filosofia B", 2, "media", ["1em", "2em", "3em"], "B"),
-        Disciplina("Sociologia B", 2, "media", ["1em", "2em", "3em"], "B"),
-    ]
-    
+    # Turmas
     turmas = [
         Turma("6anoA", "6ano", "manha", "A"),
         Turma("7anoA", "7ano", "manha", "A"),
@@ -98,6 +48,57 @@ def criar_dados_iniciais():
         Turma("3emB", "3em", "manha", "B"),
     ]
     
+    # ✅ CORREÇÃO: Disciplinas vinculadas DIRETAMENTE às turmas
+    disciplinas = [
+        # GRUPO A - EF II
+        Disciplina("Português A", 5, "pesada", ["6anoA", "7anoA", "8anoA", "9anoA"], "A"),
+        Disciplina("Matemática A", 5, "pesada", ["6anoA", "7anoA", "8anoA", "9anoA"], "A"),
+        Disciplina("História A", 2, "media", ["6anoA", "7anoA", "8anoA", "9anoA"], "A"),
+        Disciplina("Geografia A", 2, "media", ["6anoA", "7anoA", "8anoA", "9anoA"], "A"),
+        Disciplina("Ciências A", 3, "media", ["6anoA", "7anoA", "8anoA", "9anoA"], "A"),
+        Disciplina("Inglês A", 2, "leve", ["6anoA", "7anoA", "8anoA", "9anoA"], "A"),
+        Disciplina("Arte A", 2, "leve", ["6anoA", "7anoA", "8anoA", "9anoA"], "A"),
+        Disciplina("Educação Física A", 2, "pratica", ["6anoA", "7anoA", "8anoA", "9anoA"], "A"),
+        
+        # GRUPO B - EF II
+        Disciplina("Português B", 5, "pesada", ["6anoB", "7anoB", "8anoB", "9anoB"], "B"),
+        Disciplina("Matemática B", 5, "pesada", ["6anoB", "7anoB", "8anoB", "9anoB"], "B"),
+        Disciplina("História B", 2, "media", ["6anoB", "7anoB", "8anoB", "9anoB"], "B"),
+        Disciplina("Geografia B", 2, "media", ["6anoB", "7anoB", "8anoB", "9anoB"], "B"),
+        Disciplina("Ciências B", 3, "media", ["6anoB", "7anoB", "8anoB", "9anoB"], "B"),
+        Disciplina("Inglês B", 2, "leve", ["6anoB", "7anoB", "8anoB", "9anoB"], "B"),
+        Disciplina("Arte B", 2, "leve", ["6anoB", "7anoB", "8anoB", "9anoB"], "B"),
+        Disciplina("Educação Física B", 2, "pratica", ["6anoB", "7anoB", "8anoB", "9anoB"], "B"),
+        
+        # GRUPO A - EM
+        Disciplina("Português A", 5, "pesada", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("Matemática A", 5, "pesada", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("História A", 3, "media", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("Geografia A", 3, "media", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("Biologia A", 3, "media", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("Física A", 3, "pesada", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("Química A", 3, "pesada", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("Inglês A", 2, "leve", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("Arte A", 1, "leve", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("Educação Física A", 2, "pratica", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("Filosofia A", 2, "media", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("Sociologia A", 2, "media", ["1emA", "2emA", "3emA"], "A"),
+        
+        # GRUPO B - EM
+        Disciplina("Português B", 5, "pesada", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Matemática B", 5, "pesada", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("História B", 3, "media", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Geografia B", 3, "media", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Biologia B", 3, "media", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Física B", 3, "pesada", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Química B", 3, "pesada", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Inglês B", 2, "leve", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Arte B", 1, "leve", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Educação Física B", 2, "pratica", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Filosofia B", 2, "media", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Sociologia B", 2, "media", ["1emB", "2emB", "3emB"], "B"),
+    ]
+    
     salas = [
         Sala("Sala 1", 30, "normal"),
         Sala("Sala 2", 30, "normal"),
@@ -107,16 +108,15 @@ def criar_dados_iniciais():
     ]
     
     return {
-        "professores": professores,
-        "disciplinas": disciplinas,
-        "turmas": turmas,
-        "salas": salas,
+        "professores": [p.__dict__ for p in professores],
+        "disciplinas": [d.__dict__ for d in disciplinas],
+        "turmas": [t.__dict__ for t in turmas],
+        "salas": [s.__dict__ for s in salas],
         "aulas": [],
         "feriados": [],
         "periodos": []
     }
 
-# ... (o resto do arquivo permanece igual)
 def init_db():
     """Inicializa o banco de dados com dados padrão se não existir"""
     if not os.path.exists(DB_FILE):
@@ -144,25 +144,81 @@ def salvar_tudo(dados):
         print(f"Erro ao salvar: {e}")
         return False
 
+# Funções de carregamento
 def carregar_turmas():
     dados = carregar_tudo()
-    return [Turma(**t) for t in dados.get("turmas", [])]
+    turmas = dados.get("turmas", [])
+    resultado = []
+    
+    for item in turmas:
+        if isinstance(item, dict):
+            resultado.append(Turma(**item))
+        elif hasattr(item, 'nome') and hasattr(item, 'serie'):
+            resultado.append(item)
+        else:
+            print(f"Item inválido em turmas: {item}")
+    
+    return resultado
 
 def carregar_professores():
     dados = carregar_tudo()
-    return [Professor(**p) for p in dados.get("professores", [])]
+    professores = dados.get("professores", [])
+    resultado = []
+    
+    for item in professores:
+        if isinstance(item, dict):
+            resultado.append(Professor(**item))
+        elif hasattr(item, 'nome') and hasattr(item, 'disciplinas'):
+            resultado.append(item)
+        else:
+            print(f"Item inválido em professores: {item}")
+    
+    return resultado
 
 def carregar_disciplinas():
     dados = carregar_tudo()
-    return [Disciplina(**d) for d in dados.get("disciplinas", [])]
+    disciplinas = dados.get("disciplinas", [])
+    resultado = []
+    
+    for item in disciplinas:
+        if isinstance(item, dict):
+            resultado.append(Disciplina(**item))
+        elif hasattr(item, 'nome') and hasattr(item, 'carga_semanal'):
+            resultado.append(item)
+        else:
+            print(f"Item inválido em disciplinas: {item}")
+    
+    return resultado
 
 def carregar_salas():
     dados = carregar_tudo()
-    return [Sala(**s) for s in dados.get("salas", [])]
+    salas = dados.get("salas", [])
+    resultado = []
+    
+    for item in salas:
+        if isinstance(item, dict):
+            resultado.append(Sala(**item))
+        elif hasattr(item, 'nome') and hasattr(item, 'capacidade'):
+            resultado.append(item)
+        else:
+            print(f"Item inválido em salas: {item}")
+    
+    return resultado
 
 def carregar_grade():
     dados = carregar_tudo()
-    return [Aula(**a) for a in dados.get("aulas", [])]
+    aulas = dados.get("aulas", [])
+    resultado = []
+    
+    for item in aulas:
+        if isinstance(item, dict):
+            resultado.append(Aula(**item))
+        elif hasattr(item, 'turma') and hasattr(item, 'disciplina'):
+            resultado.append(item)
+        else:
+            print(f"Item inválido em aulas: {item}")
+    
+    return resultado
 
 def carregar_feriados():
     dados = carregar_tudo()
@@ -172,29 +228,36 @@ def carregar_periodos():
     dados = carregar_tudo()
     return dados.get("periodos", [])
 
+# Funções de salvamento
+def _converter_para_dict(obj):
+    """Converte objeto para dicionário se for um objeto models"""
+    if hasattr(obj, '__dict__'):
+        return obj.__dict__
+    return obj
+
 def salvar_turmas(turmas):
     dados = carregar_tudo()
-    dados["turmas"] = [t.__dict__ for t in turmas]
+    dados["turmas"] = [_converter_para_dict(t) for t in turmas]
     return salvar_tudo(dados)
 
 def salvar_professores(professores):
     dados = carregar_tudo()
-    dados["professores"] = [p.__dict__ for p in professores]
+    dados["professores"] = [_converter_para_dict(p) for p in professores]
     return salvar_tudo(dados)
 
 def salvar_disciplinas(disciplinas):
     dados = carregar_tudo()
-    dados["disciplinas"] = [d.__dict__ for d in disciplinas]
+    dados["disciplinas"] = [_converter_para_dict(d) for d in disciplinas]
     return salvar_tudo(dados)
 
 def salvar_salas(salas):
     dados = carregar_tudo()
-    dados["salas"] = [s.__dict__ for s in salas]
+    dados["salas"] = [_converter_para_dict(s) for s in salas]
     return salvar_tudo(dados)
 
 def salvar_grade(aulas):
     dados = carregar_tudo()
-    dados["aulas"] = [a.__dict__ for a in aulas]
+    dados["aulas"] = [_converter_para_dict(a) for a in aulas]
     return salvar_tudo(dados)
 
 def salvar_feriados(feriados):
@@ -209,5 +272,7 @@ def salvar_periodos(periodos):
 
 def resetar_banco():
     """Reseta o banco de dados para os valores iniciais"""
-    dados_iniciais = criar_dados_iniciais()
-    return salvar_tudo(dados_iniciais)
+    if os.path.exists(DB_FILE):
+        os.remove(DB_FILE)
+    init_db()
+    return True

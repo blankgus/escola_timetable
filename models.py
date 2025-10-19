@@ -3,14 +3,14 @@ from typing import List, Set
 import uuid
 
 DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex"]
-HORARIOS_DISPONIVEIS = [1, 2, 3, 4, 5, 6, 7, 8]  # ✅ 8 HORÁRIOS
+HORARIOS_DISPONIVEIS = [1, 2, 3, 4, 5, 6, 7, 8]
 
 @dataclass
 class Disciplina:
     nome: str
     carga_semanal: int
     tipo: str
-    series: List[str]
+    turmas: List[str]  # ✅ AGORA: Lista de turmas específicas
     grupo: str = "A"
     cor_fundo: str = "#4A90E2"
     cor_fonte: str = "#FFFFFF"
@@ -28,7 +28,7 @@ class Professor:
 @dataclass
 class Turma:
     nome: str
-    serie: str
+    serie: str  # Mantido para referência
     turno: str
     grupo: str = "A"
     id: str = field(default_factory=lambda: str(uuid.uuid4()))

@@ -37,14 +37,14 @@ class SimpleGradeHoraria:
         for idx, turma in enumerate(self.turmas):
             grupo_turma = self.obter_grupo_seguro(turma)
             
-            # CORREÇÃO: Filtrar disciplinas APENAS do MESMO GRUPO
+            # ✅ CORREÇÃO: Filtrar disciplinas pela TURMA ESPECÍFICA
             disciplinas_turma = []
             disciplinas_info = []  # Para debug
             
             for disc in self.disciplinas:
                 disc_grupo = self.obter_grupo_seguro(disc)
-                # SÓ inclui disciplinas do MESMO grupo e série correta
-                if turma.serie in disc.series and disc_grupo == grupo_turma:
+                # ✅ AGORA: Verifica se a disciplina está vinculada a ESTA turma específica
+                if turma.nome in disc.turmas and disc_grupo == grupo_turma:
                     # Adiciona a disciplina repetidas vezes conforme carga semanal
                     for i in range(disc.carga_semanal):
                         disciplinas_turma.append(disc)
@@ -52,10 +52,11 @@ class SimpleGradeHoraria:
             
             st.write(f"**Turma {turma.nome}**: {len(disciplinas_turma)} aulas a alocar")
             if disciplinas_info:
-                st.write(f"Disciplinas: {', '.join(set([d.nome for d in disciplinas_turma]))}")
+                disciplinas_unicas = list(set([d.nome for d in disciplinas_turma]))
+                st.write(f"Disciplinas: {', '.join(disciplinas_unicas)}")
             
             if not disciplinas_turma:
-                st.warning(f"⚠️ Turma {turma.nome} [{grupo_turma}] não tem disciplinas do seu grupo")
+                st.warning(f"⚠️ Turma {turma.nome} não tem disciplinas vinculadas")
                 progress_bar.progress((idx + 1) / len(self.turmas))
                 continue
             
@@ -155,6 +156,7 @@ class SimpleGradeHoraria:
                         aulas_turma.append(aula)
                         horarios_ocupados.add(slot_key)
                         disciplinas_restantes.pop(0)
+                        break  # Sair do loop interno quando alocar
         
         if disciplinas_restantes:
             st.warning(f"⚠️ Não foi possível alocar {len(disciplinas_restantes)} aulas para {turma.nome}")
@@ -196,6 +198,8 @@ class SimpleGradeHoraria:
         
         # DEBUG: Mostrar por que não encontrou professor
         st.warning(f"❌ Nenhum professor encontrado para {disciplina_nome} no {dia} {horario}º (Grupo {grupo_turma})")
+        st.write(f"  - Professores que ministram {disciplina_nome}: {[p.nome for p in self.professores if disciplina_nome in p.disciplinas]}")
+        st.write(f"  - Grupo necessário: {grupo_turma}")
         return None
     
     def _encontrar_sala_disponivel(self, dia, horario):

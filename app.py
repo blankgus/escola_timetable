@@ -129,8 +129,9 @@ with abas[0]:  # ABA INÍCIO
         disciplinas_turma = []
         grupo_turma = obter_grupo_seguro(turma)
         
+        # ✅ CORREÇÃO: Verificar disciplinas vinculadas DIRETAMENTE à turma
         for disc in st.session_state.disciplinas:
-            if turma.serie in disc.series and obter_grupo_seguro(disc) == grupo_turma:
+            if turma.nome in disc.turmas and obter_grupo_seguro(disc) == grupo_turma:
                 carga_total += disc.carga_semanal
                 disciplinas_turma.append(f"{disc.nome} ({disc.carga_semanal}h)")
         
@@ -165,16 +166,19 @@ with abas[1]:  # ABA DISCIPLINAS
                 carga = st.number_input("Carga Semanal*", 1, 10, 3)
                 tipo = st.selectbox("Tipo*", ["pesada", "media", "leve", "pratica"])
             with col2:
-                series = st.text_input("Séries* (separadas por vírgula)", "6ano,7ano,8ano,9ano,1em,2em,3em")
+                # ✅ MUDANÇA: Selecionar turmas específicas em vez de séries
+                turmas_opcoes = [t.nome for t in st.session_state.turmas]
+                turmas_selecionadas = st.multiselect("Turmas*", turmas_opcoes)
                 grupo = st.selectbox("Grupo*", ["A", "B"])
                 cor_fundo = st.color_picker("Cor de Fundo", "#4A90E2")
                 cor_fonte = st.color_picker("Cor da Fonte", "#FFFFFF")
             
             if st.form_submit_button("✅ Adicionar Disciplina"):
-                if nome and series:
+                if nome and turmas_selecionadas:
                     try:
-                        series_list = [s.strip() for s in series.split(",") if s.strip()]
-                        nova_disciplina = Disciplina(nome, carga, tipo, series_list, grupo, cor_fundo, cor_fonte)
+                        nova_disciplina = Disciplina(
+                            nome, carga, tipo, turmas_selecionadas, grupo, cor_fundo, cor_fonte
+                        )
                         st.session_state.disciplinas.append(nova_disciplina)
                         if salvar_tudo():
                             st.success(f"✅ Disciplina '{nome}' adicionada!")
@@ -207,7 +211,14 @@ with abas[1]:  # ABA DISCIPLINAS
                         key=f"tipo_{disc.id}"
                     )
                 with col2:
-                    novas_series = st.text_input("Séries", ", ".join(disc.series), key=f"series_{disc.id}")
+                    # ✅ MUDANÇA: Editar turmas específicas
+                    turmas_opcoes = [t.nome for t in st.session_state.turmas]
+                    turmas_selecionadas = st.multiselect(
+                        "Turmas", 
+                        turmas_opcoes,
+                        default=disc.turmas,
+                        key=f"turmas_{disc.id}"
+                    )
                     novo_grupo = st.selectbox(
                         "Grupo", 
                         ["A", "B"],
@@ -220,13 +231,12 @@ with abas[1]:  # ABA DISCIPLINAS
                 col1, col2 = st.columns(2)
                 with col1:
                     if st.form_submit_button("💾 Salvar Alterações"):
-                        if novo_nome and novas_series:
+                        if novo_nome and turmas_selecionadas:
                             try:
-                                series_list = [s.strip() for s in novas_series.split(",") if s.strip()]
                                 disc.nome = novo_nome
                                 disc.carga_semanal = nova_carga
                                 disc.tipo = novo_tipo
-                                disc.series = series_list
+                                disc.turmas = turmas_selecionadas
                                 disc.grupo = novo_grupo
                                 disc.cor_fundo = nova_cor_fundo
                                 disc.cor_fonte = nova_cor_fonte
@@ -448,8 +458,10 @@ with abas[3]:  # ABA TURMAS
                 grupo_turma = obter_grupo_seguro(turma)
                 carga_atual = 0
                 disciplinas_turma = []
+                
+                # ✅ CORREÇÃO: Verificar disciplinas vinculadas DIRETAMENTE à turma
                 for disc in st.session_state.disciplinas:
-                    if turma.serie in disc.series and obter_grupo_seguro(disc) == grupo_turma:
+                    if turma.nome in disc.turmas and obter_grupo_seguro(disc) == grupo_turma:
                         carga_atual += disc.carga_semanal
                         disciplinas_turma.append(disc.nome)
                 
@@ -610,36 +622,6 @@ with abas[5]:  # ABA GERAR GRADE
     else:
         turmas_filtradas = st.session_state.turmas
         grupo_texto = "Todas as Turmas"
-
-    with abas[5]:  # ABA GERAR GRADE
-    st.header("🗓️ Gerar Grade Horária")
-    
-    # ... (código anterior mantido)
-    
-    if st.button("🚀 Gerar Grade Horária", type="primary", use_container_width=True):
-        if not turmas_filtradas:
-            st.error("❌ Nenhuma turma selecionada para gerar grade!")
-        elif not disciplinas_filtradas:
-            st.error("❌ Nenhuma disciplina disponível para as turmas selecionadas!")
-        elif problemas_carga:
-            st.error("❌ Corrija os problemas de carga horária antes de gerar!")
-        else:
-            # ✅ VERIFICAÇÃO ADICIONAL: Professores disponíveis
-            professores_com_disciplinas = []
-            for turma in turmas_filtradas:
-                grupo_turma = obter_grupo_seguro(turma)
-                for disc in disciplinas_filtradas:
-                    if turma.serie in disc.series and obter_grupo_seguro(disc) == grupo_turma:
-                        professores_para_disc = [p for p in st.session_state.professores 
-                                               if disc.nome in p.disciplinas and 
-                                               obter_grupo_seguro(p) in [grupo_turma, "AMBOS"]]
-                        if not professores_para_disc:
-                            st.error(f"❌ Nenhum professor disponível para {disc.nome} na turma {turma.nome}")
-                            st.stop()
-            
-            with st.spinner(f"Gerando grade para {grupo_texto}..."):
-                try:
-                    # ... (resto do código mantido)
     
     # Filtrar disciplinas pelo GRUPO CORRETO
     if tipo_grade == "Grade por Grupo A":
@@ -658,8 +640,11 @@ with abas[5]:  # ABA GERAR GRADE
         aulas_turma = 0
         grupo_turma = obter_grupo_seguro(turma)
         
+        # ✅ CORREÇÃO: Contar aulas baseado no vínculo DIRETO turma-disciplina
         for disc in disciplinas_filtradas:
-            if turma.serie in disc.series and obter_grupo_seguro(disc) == grupo_turma:
+            disc_grupo = obter_grupo_seguro(disc)
+            # AGORA: Verifica se a disciplina está vinculada a ESTA turma específica
+            if turma.nome in disc.turmas and disc_grupo == grupo_turma:
                 aulas_turma += disc.carga_semanal
                 total_aulas += disc.carga_semanal
         
@@ -686,7 +671,7 @@ with abas[5]:  # ABA GERAR GRADE
             st.write(f"- {problema}")
     
     if total_aulas == 0:
-        st.error("❌ Nenhuma aula para alocar! Verifique se as disciplinas estão associadas às séries corretas.")
+        st.error("❌ Nenhuma aula para alocar! Verifique se as disciplinas estão vinculadas às turmas corretas.")
     elif total_aulas > capacidade_total:
         st.error("❌ Capacidade insuficiente! Reduza a carga horária.")
     elif problemas_carga:
