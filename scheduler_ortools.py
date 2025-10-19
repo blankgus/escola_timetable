@@ -8,11 +8,11 @@ class GradeHorariaORTools:
         self.turmas = turmas
         self.professores = professores
         self.disciplinas = {d.nome: d for d in disciplinas}
-        self.dias = DIAS_SEMANA
+        self.dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta']  # ✅ Usar formato completo
         self.horarios = HORARIOS_DISPONIVEIS
         self.model = cp_model.CpModel()
         self.solver = cp_model.CpSolver()
-        self.solver.parameters.max_time_in_seconds = 60.0  # Mais tempo para resolver
+        self.solver.parameters.max_time_in_seconds = 60.0
         self.relaxar_horario_ideal = relaxar_horario_ideal
 
         self.turma_idx = {t.nome: i for i, t in enumerate(turmas)}
@@ -47,12 +47,18 @@ class GradeHorariaORTools:
                             if disc_nome not in p.disciplinas:
                                 continue
                             
-                            # Verificar disponibilidade do dia
+                            # Verificar disponibilidade do dia (já está no formato correto)
                             if dia not in p.disponibilidade:
                                 continue
                             
                             # Verificar horário indisponível
                             if f"{dia}_{horario}" in p.horarios_indisponiveis:
+                                continue
+                            
+                            # Verificar grupo
+                            prof_grupo = getattr(p, 'grupo', 'A')
+                            turma_grupo = next((t.grupo for t in self.turmas if t.nome == turma_nome), 'A')
+                            if prof_grupo not in [turma_grupo, "AMBOS"]:
                                 continue
                             
                             profs_validos.append(p.nome)

@@ -1,5 +1,6 @@
 import random
 from models import Aula
+import streamlit as st  # ✅ ADICIONAR ESTA LINHA
 
 class SimpleGradeHoraria:
     def __init__(self, turmas, professores, disciplinas):
@@ -100,6 +101,9 @@ class SimpleGradeHoraria:
                     
                     aulas_turma.append(aula)
                     disciplinas_restantes.pop(0)
+                else:
+                    # Se não encontrou professor, pular esta disciplina por agora
+                    disciplinas_restantes.append(disciplinas_restantes.pop(0))
         
         return aulas_turma
     
@@ -112,12 +116,16 @@ class SimpleGradeHoraria:
             
             # CRITÉRIOS DE COMPATIBILIDADE:
             # 1. Professor deve ministrar a disciplina
-            # 2. Professor deve estar disponível no dia
+            # 2. Professor deve estar disponível no dia (converter formato)
             # 3. Professor não pode ter horário indisponível
             # 4. Professor deve ser do MESMO grupo ou AMBOS
+            
+            # Converter dia para formato completo para verificar disponibilidade
+            dia_completo = self._converter_dia_para_completo(dia)
+            
             if (disciplina_nome in professor.disciplinas and
-                dia in professor.disponibilidade and
-                f"{dia}_{horario}" not in professor.horarios_indisponiveis and
+                dia_completo in professor.disponibilidade and
+                f"{dia_completo}_{horario}" not in professor.horarios_indisponiveis and
                 (professor_grupo == grupo_turma or professor_grupo == "AMBOS")):
                 
                 professores_candidatos.append(professor)
@@ -125,6 +133,15 @@ class SimpleGradeHoraria:
         if professores_candidatos:
             return random.choice(professores_candidatos)
         return None
+    
+    def _converter_dia_para_completo(self, dia):
+        """Converte dia do formato abreviado para completo"""
+        if dia == "seg": return "segunda"
+        elif dia == "ter": return "terca"
+        elif dia == "qua": return "quarta"
+        elif dia == "qui": return "quinta"
+        elif dia == "sex": return "sexta"
+        else: return dia
     
     def _encontrar_sala_disponivel(self, dia, horario):
         """Encontra uma sala disponível (implementação simples)"""
