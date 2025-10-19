@@ -3,7 +3,7 @@ from typing import List, Set
 import uuid
 
 DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex"]
-HORARIOS_DISPONIVEIS = [1, 2, 3, 4, 5, 6, 7]
+HORARIOS_DISPONIVEIS = [1, 2, 3, 4, 5, 6, 7, 8]  # ✅ 8 HORÁRIOS
 
 @dataclass
 class Disciplina:

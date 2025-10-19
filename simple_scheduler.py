@@ -24,8 +24,8 @@ class SimpleGradeHoraria:
         
         # Dias da semana (segunda a sexta)
         dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta']
-        # Horários disponíveis (apenas manhã - 7 horários)
-        horarios = [1, 2, 3, 4, 5, 6, 7]
+        # Horários disponíveis (8 horários) ✅ CORRIGIDO
+        horarios = [1, 2, 3, 4, 5, 6, 7, 8]
         
         st.info(f"📋 Gerando grade semanal para {len(self.turmas)} turmas...")
         
@@ -115,4 +115,17 @@ class SimpleGradeHoraria:
             # 2. Professor deve estar disponível no dia
             # 3. Professor não pode ter horário indisponível
             # 4. Professor deve ser do MESMO grupo ou AMBOS
-           
+            if (disciplina_nome in professor.disciplinas and
+                dia in professor.disponibilidade and
+                f"{dia}_{horario}" not in professor.horarios_indisponiveis and
+                (professor_grupo == grupo_turma or professor_grupo == "AMBOS")):
+                
+                professores_candidatos.append(professor)
+        
+        if professores_candidatos:
+            return random.choice(professores_candidatos)
+        return None
+    
+    def _encontrar_sala_disponivel(self, dia, horario):
+        """Encontra uma sala disponível (implementação simples)"""
+        return "Sala 1"
