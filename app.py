@@ -770,6 +770,76 @@ with abas[5]:  # ABA GERAR GRADE
                             
                     except Exception as e:
                         st.error(f"❌ Erro ao gerar grade: {str(e)}")
+                        with abas[5]:  # ABA GERAR GRADE
+    # ... (código anterior mantido)
+    
+    if st.button("🚀 Gerar Grade Horária", type="primary", use_container_width=True):
+        # ... (código de geração mantido)
+        
+        if aulas:
+            # ... (código do dataframe mantido)
+            
+            st.subheader("📅 Visualização da Grade Horária")
+            
+            # ✅ NOVA VISUALIZAÇÃO: Grade em formato de calendário
+            st.info("🎯 Visualização Semanal - Formato Calendário")
+            
+            # Criar grades para cada turma
+            turmas_com_aulas = list(set(a.turma for a in aulas))
+            
+            for turma_nome in turmas_com_aulas:
+                st.write(f"### 🎒 Grade da Turma: {turma_nome}")
+                
+                # Filtrar aulas da turma
+                aulas_turma = [a for a in aulas if a.turma == turma_nome]
+                
+                # Criar matriz da grade
+                dias_ordenados = ["segunda", "terca", "quarta", "quinta", "sexta"]
+                horarios_ordenados = [1, 2, 3, 4, 5, 6, 7, 8]
+                
+                # Criar dataframe vazio
+                grade_data = []
+                for horario in horarios_ordenados:
+                    linha = {"Horário": HORARIOS_REAIS[horario]}
+                    for dia in dias_ordenados:
+                        # Encontrar aula neste horário e dia
+                        aula_no_slot = next((a for a in aulas_turma if a.dia == dia and a.horario == horario), None)
+                        if aula_no_slot:
+                            linha[dia] = f"{aula_no_slot.disciplina}\n({aula_no_slot.professor})"
+                        else:
+                            linha[dia] = "Livre"
+                    grade_data.append(linha)
+                
+                # Criar DataFrame
+                df_grade = pd.DataFrame(grade_data)
+                
+                # Estilizar a grade
+                def colorizar_celulas(val):
+                    if val == "Livre":
+                        return 'background-color: #f8f9fa; color: #6c757d;'
+                    elif "Intervalo" in val:
+                        return 'background-color: #fff3cd; color: #856404; font-weight: bold;'
+                    else:
+                        return 'background-color: #d1ecf1; color: #0c5460;'
+                
+                # Aplicar estilo
+                styled_df = df_grade.style.applymap(colorizar_celulas, subset=dias_ordenados)
+                
+                # Exibir grade
+                st.dataframe(styled_df, use_container_width=True, height=400)
+                
+                # Adicionar legenda
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.markdown("🟦 **Aula Normal**")
+                with col2:
+                    st.markdown("🟨 **Intervalo**")
+                with col3:
+                    st.markdown("⬜ **Horário Livre**")
+                
+                st.markdown("---")
+
+            # ... (resto do código mantido - download Excel, etc)
 
 # Sidebar
 st.sidebar.title("⚙️ Configurações")
