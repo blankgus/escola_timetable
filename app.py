@@ -610,6 +610,36 @@ with abas[5]:  # ABA GERAR GRADE
     else:
         turmas_filtradas = st.session_state.turmas
         grupo_texto = "Todas as Turmas"
+
+    with abas[5]:  # ABA GERAR GRADE
+    st.header("🗓️ Gerar Grade Horária")
+    
+    # ... (código anterior mantido)
+    
+    if st.button("🚀 Gerar Grade Horária", type="primary", use_container_width=True):
+        if not turmas_filtradas:
+            st.error("❌ Nenhuma turma selecionada para gerar grade!")
+        elif not disciplinas_filtradas:
+            st.error("❌ Nenhuma disciplina disponível para as turmas selecionadas!")
+        elif problemas_carga:
+            st.error("❌ Corrija os problemas de carga horária antes de gerar!")
+        else:
+            # ✅ VERIFICAÇÃO ADICIONAL: Professores disponíveis
+            professores_com_disciplinas = []
+            for turma in turmas_filtradas:
+                grupo_turma = obter_grupo_seguro(turma)
+                for disc in disciplinas_filtradas:
+                    if turma.serie in disc.series and obter_grupo_seguro(disc) == grupo_turma:
+                        professores_para_disc = [p for p in st.session_state.professores 
+                                               if disc.nome in p.disciplinas and 
+                                               obter_grupo_seguro(p) in [grupo_turma, "AMBOS"]]
+                        if not professores_para_disc:
+                            st.error(f"❌ Nenhum professor disponível para {disc.nome} na turma {turma.nome}")
+                            st.stop()
+            
+            with st.spinner(f"Gerando grade para {grupo_texto}..."):
+                try:
+                    # ... (resto do código mantido)
     
     # Filtrar disciplinas pelo GRUPO CORRETO
     if tipo_grade == "Grade por Grupo A":
