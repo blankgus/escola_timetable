@@ -7,15 +7,8 @@ DB_FILE = "escola_database.json"
 
 def criar_dados_iniciais():
     """Cria dados iniciais para teste"""
-
-    # ✅ ADICIONAR: Disciplina de Intervalo fixa
-    disciplinas.append(Disciplina("INTERVALO", 0, "intervalo", 
-        ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA", 
-         "6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "AMBOS"))
     
-    # ... (resto do código)
-    
-    # ✅ CORREÇÃO: Professores com nomes EXATOS das disciplinas
+    # ✅ CORREÇÃO: Professores com nomes EXATOS das disciplinas e grupo AMBOS
     professores = [
         Professor("Heliana", ["Português A", "Português B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Deise", ["Português A", "Português B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
@@ -112,7 +105,6 @@ def criar_dados_iniciais():
         "periodos": []
     }
 
-# ... (o resto do arquivo permanece igual - funções de carregamento/salvamento)
 def init_db():
     """Inicializa o banco de dados com dados padrão se não existir"""
     if not os.path.exists(DB_FILE):
