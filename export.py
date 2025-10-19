@@ -14,7 +14,8 @@ def exportar_para_excel(aulas, caminho="grade_horaria.xlsx"):
         4: "09:30-10:00", # INTERVALO
         5: "10:00-10:50",
         6: "10:50-11:40",
-        7: "11:40-12:30"
+        7: "11:40-12:20",
+        8: "12:20-13:10"
     }
     df["Horário"] = df["Horário"].map(HORARIOS_REAIS).fillna("Horário Inválido")
     tabela = df.pivot_table(
@@ -43,10 +44,11 @@ def exportar_para_pdf(aulas, caminho="grade_horaria.pdf"):
         1: "07:00-07:50",
         2: "07:50-08:40",
         3: "08:40-09:30",
-        4: "09:30-10:00", # INTERVALO
-        5: "10:00-10:50",
-        6: "10:50-11:40",
-        7: "11:40-12:30"
+        4: "09:30-09:50", # INTERVALO
+        5: "09:50-10:40",
+        6: "10:40-11:30",
+        7: "11:30-12:20",
+        8: "12:20-13:10"
     }
     for turma in sorted(turmas_aulas.keys()):
         pdf.set_font("Arial", 'B', 12)
