@@ -727,10 +727,27 @@ st.sidebar.write(f"**Disciplinas:** {len(st.session_state.disciplinas)}")
 st.sidebar.write(f"**Salas:** {len(st.session_state.salas)}")
 st.sidebar.write(f"**Aulas na Grade:** {len(st.session_state.get('aulas', []))}")
 
+# Sidebar
+st.sidebar.title("⚙️ Configurações")
+if st.sidebar.button("🔄 Resetar Banco de Dados"):
+    try:
+        database.resetar_banco()
+        st.sidebar.success("✅ Banco resetado! Recarregue a página.")
+    except Exception as e:
+        st.sidebar.error(f"❌ Erro ao resetar: {str(e)}")
+
+st.sidebar.write("### Status do Sistema:")
+st.sidebar.write(f"**Turmas:** {len(st.session_state.turmas)}")
+st.sidebar.write(f"**Professores:** {len(st.session_state.professores)}")
+st.sidebar.write(f"**Disciplinas:** {len(st.session_state.disciplinas)}")
+st.sidebar.write(f"**Salas:** {len(st.session_state.salas)}")
+st.sidebar.write(f"**Aulas na Grade:** {len(st.session_state.get('aulas', []))}")
+
 st.sidebar.write("### 💡 Informações:")
 st.sidebar.write("**Carga Horária Máxima:**")
 st.sidebar.write("- EF II: 25h semanais")
 st.sidebar.write("- EM: 32h semanais")
 
 st.sidebar.write("### 🕒 Horários Reais:")
-for horario,
+for horario, periodo in HORARIOS_REAIS.items():
+    st.sidebar.write(f"**{horario}º:** {periodo}")
