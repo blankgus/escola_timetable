@@ -1,6 +1,6 @@
 import random
 from models import Aula
-import streamlit as st  # ✅ ADICIONAR ESTA LINHA
+import streamlit as st
 
 class SimpleGradeHoraria:
     def __init__(self, turmas, professores, disciplinas):
@@ -23,31 +23,40 @@ class SimpleGradeHoraria:
         """Gera uma grade horária semanal tradicional"""
         self.aulas_alocadas = []
         
-        # Dias da semana (segunda a sexta)
+        # Dias da semana (segunda a sexta) - ✅ FORMATO COMPLETO
         dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta']
-        # Horários disponíveis (8 horários) ✅ CORRIGIDO
+        # Horários disponíveis (8 horários)
         horarios = [1, 2, 3, 4, 5, 6, 7, 8]
         
         st.info(f"📋 Gerando grade semanal para {len(self.turmas)} turmas...")
         
         progress_bar = st.progress(0)
+        total_aulas_alocadas = 0
         
         # Para cada turma, criar grade semanal
         for idx, turma in enumerate(self.turmas):
             grupo_turma = self.obter_grupo_seguro(turma)
             
-            # CORREÇÃO CRÍTICA: Filtrar disciplinas APENAS do MESMO GRUPO
+            # CORREÇÃO: Filtrar disciplinas APENAS do MESMO GRUPO
             disciplinas_turma = []
+            disciplinas_info = []  # Para debug
+            
             for disc in self.disciplinas:
                 disc_grupo = self.obter_grupo_seguro(disc)
-                # SÓ inclui disciplinas do MESMO grupo
+                # SÓ inclui disciplinas do MESMO grupo e série correta
                 if turma.serie in disc.series and disc_grupo == grupo_turma:
                     # Adiciona a disciplina repetidas vezes conforme carga semanal
-                    for _ in range(disc.carga_semanal):
+                    for i in range(disc.carga_semanal):
                         disciplinas_turma.append(disc)
+                        disciplinas_info.append(f"{disc.nome} ({i+1}/{disc.carga_semanal})")
+            
+            st.write(f"**Turma {turma.nome}**: {len(disciplinas_turma)} aulas a alocar")
+            if disciplinas_info:
+                st.write(f"Disciplinas: {', '.join(set([d.nome for d in disciplinas_turma]))}")
             
             if not disciplinas_turma:
                 st.warning(f"⚠️ Turma {turma.nome} [{grupo_turma}] não tem disciplinas do seu grupo")
+                progress_bar.progress((idx + 1) / len(self.turmas))
                 continue
             
             # Embaralhar disciplinas para distribuição
@@ -56,10 +65,12 @@ class SimpleGradeHoraria:
             # Alocar aulas para esta turma
             aulas_turma = self._alocar_turma_semanal(turma, disciplinas_turma, dias, horarios, grupo_turma)
             self.aulas_alocadas.extend(aulas_turma)
+            total_aulas_alocadas += len(aulas_turma)
             
+            st.write(f"✅ {len(aulas_turma)} aulas alocadas para {turma.nome}")
             progress_bar.progress((idx + 1) / len(self.turmas))
         
-        st.success(f"✅ Grade gerada com {len(self.aulas_alocadas)} aulas!")
+        st.success(f"✅ Grade gerada com {total_aulas_alocadas} aulas no total!")
         return self.aulas_alocadas
     
     def _alocar_turma_semanal(self, turma, disciplinas_turma, dias, horarios, grupo_turma):
@@ -67,11 +78,19 @@ class SimpleGradeHoraria:
         aulas_turma = []
         disciplinas_restantes = disciplinas_turma.copy()
         
-        # Tentar alocar em cada dia e horário
+        # Criar matriz de horários ocupados
+        horarios_ocupados = set()
+        
+        # Tentativa 1: Alocar de forma sequencial
         for dia in dias:
             for horario in horarios:
                 if not disciplinas_restantes:
                     break
+                
+                # Verificar se este horário já está ocupado
+                slot_key = f"{turma.nome}_{dia}_{horario}"
+                if slot_key in horarios_ocupados:
+                    continue
                 
                 # Pegar próxima disciplina
                 disciplina = disciplinas_restantes[0]
@@ -79,7 +98,7 @@ class SimpleGradeHoraria:
                 # VERIFICAÇÃO DE SEGURANÇA: garantir que é do mesmo grupo
                 disc_grupo = self.obter_grupo_seguro(disciplina)
                 if disc_grupo != grupo_turma:
-                    st.error(f"❌ ERRO CRÍTICO: Disciplina {disciplina.nome} [{disc_grupo}] para turma {turma.nome} [{grupo_turma}]")
+                    st.error(f"❌ ERRO: Disciplina {disciplina.nome} [{disc_grupo}] para turma {turma.nome} [{grupo_turma}]")
                     disciplinas_restantes.pop(0)
                     continue
                 
@@ -100,10 +119,46 @@ class SimpleGradeHoraria:
                     )
                     
                     aulas_turma.append(aula)
+                    horarios_ocupados.add(slot_key)
                     disciplinas_restantes.pop(0)
-                else:
-                    # Se não encontrou professor, pular esta disciplina por agora
-                    disciplinas_restantes.append(disciplinas_restantes.pop(0))
+        
+        # Tentativa 2: Se ainda há disciplinas restantes, tentar alocar em slots livres
+        tentativas_extras = 0
+        while disciplinas_restantes and tentativas_extras < 100:  # Limite de segurança
+            tentativas_extras += 1
+            for dia in dias:
+                for horario in horarios:
+                    if not disciplinas_restantes:
+                        break
+                    
+                    slot_key = f"{turma.nome}_{dia}_{horario}"
+                    if slot_key in horarios_ocupados:
+                        continue
+                    
+                    # Tentar com a primeira disciplina disponível
+                    disciplina = disciplinas_restantes[0]
+                    professor = self._encontrar_professor_compativel(disciplina.nome, dia, horario, grupo_turma)
+                    
+                    if professor:
+                        sala = self._encontrar_sala_disponivel(dia, horario)
+                        
+                        aula = Aula(
+                            turma=turma.nome,
+                            disciplina=disciplina.nome,
+                            professor=professor.nome,
+                            dia=dia,
+                            horario=horario,
+                            sala=sala,
+                            grupo=grupo_turma
+                        )
+                        
+                        aulas_turma.append(aula)
+                        horarios_ocupados.add(slot_key)
+                        disciplinas_restantes.pop(0)
+        
+        if disciplinas_restantes:
+            st.warning(f"⚠️ Não foi possível alocar {len(disciplinas_restantes)} aulas para {turma.nome}")
+            st.write(f"Disciplinas não alocadas: {[d.nome for d in disciplinas_restantes]}")
         
         return aulas_turma
     
@@ -116,33 +171,35 @@ class SimpleGradeHoraria:
             
             # CRITÉRIOS DE COMPATIBILIDADE:
             # 1. Professor deve ministrar a disciplina
-            # 2. Professor deve estar disponível no dia (converter formato)
+            if disciplina_nome not in professor.disciplinas:
+                continue
+            
+            # 2. Professor deve estar disponível no dia (formato completo)
+            if dia not in professor.disponibilidade:
+                continue
+            
             # 3. Professor não pode ter horário indisponível
+            if f"{dia}_{horario}" in professor.horarios_indisponiveis:
+                continue
+            
             # 4. Professor deve ser do MESMO grupo ou AMBOS
+            if professor_grupo not in [grupo_turma, "AMBOS"]:
+                continue
             
-            # Converter dia para formato completo para verificar disponibilidade
-            dia_completo = self._converter_dia_para_completo(dia)
-            
-            if (disciplina_nome in professor.disciplinas and
-                dia_completo in professor.disponibilidade and
-                f"{dia_completo}_{horario}" not in professor.horarios_indisponiveis and
-                (professor_grupo == grupo_turma or professor_grupo == "AMBOS")):
-                
-                professores_candidatos.append(professor)
+            professores_candidatos.append(professor)
         
         if professores_candidatos:
-            return random.choice(professores_candidatos)
+            # Ordenar por quantidade de aulas já atribuídas (para distribuir carga)
+            professores_ordenados = sorted(professores_candidatos, 
+                                         key=lambda p: len([a for a in self.aulas_alocadas if a.professor == p.nome]))
+            return professores_ordenados[0]
+        
+        # DEBUG: Mostrar por que não encontrou professor
+        st.warning(f"❌ Nenhum professor encontrado para {disciplina_nome} no {dia} {horario}º (Grupo {grupo_turma})")
         return None
-    
-    def _converter_dia_para_completo(self, dia):
-        """Converte dia do formato abreviado para completo"""
-        if dia == "seg": return "segunda"
-        elif dia == "ter": return "terca"
-        elif dia == "qua": return "quarta"
-        elif dia == "qui": return "quinta"
-        elif dia == "sex": return "sexta"
-        else: return dia
     
     def _encontrar_sala_disponivel(self, dia, horario):
         """Encontra uma sala disponível (implementação simples)"""
+        # Implementação básica - sempre retorna Sala 1
+        # Em uma versão mais avançada, verificaria conflitos de sala
         return "Sala 1"
