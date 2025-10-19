@@ -1,284 +1,41 @@
-import json
-import os
-from models import Turma, Professor, Disciplina, Sala, Aula
+import streamlit as st
+import pandas as pd
+import database
+from session_state import init_session_state
+from auto_save import salvar_tudo
+from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA, HORARIOS_DISPONIVEIS
+from scheduler_ortools import GradeHorariaORTools
+from simple_scheduler import SimpleGradeHoraria
+import io
+import traceback
 
-# Arquivo de database
-DB_FILE = "escola_database.json"
+# Configuração da página
+st.set_page_config(page_title="Escola Timetable", layout="wide")
+st.title("🕒 Gerador Inteligente de Grade Horária - Grupos A e B")
 
-def criar_dados_iniciais():
-    """Cria dados iniciais para teste"""
-    
-    # Professores reais que você forneceu
-    professores = [
-        Professor("Heliana", ["Português"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Deise", ["Português"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Loide", ["Português"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Tatiane", ["Matemática"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Ricardo", ["Matemática"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Laís", ["História"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Waldemar", ["História"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Rene", ["Geografia"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Vladmir", ["Química"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Zabuor", ["Química"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Gisele", ["Geografia"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Marina", ["Biologia"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("César", ["Informática", "Física"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Anna Maria", ["Filosofia", "Sociologia"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Marcão", ["Educação Física"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Andréia", ["Educação Física"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Vanessa", ["Arte"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-        Professor("Andréia Barreto", ["Dinâmica", "Vida Pratica"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS", {f"{dia}_{horario}" for dia in ["segunda", "terca", "quarta", "quinta", "sexta"] for horario in [1,2,3,5,6,7]}),
-    ]
-    
-    # Disciplinas básicas para EF II e EM
-    disciplinas = [
-        # EF II - Grupo A
-        Disciplina("Português A", 5, "pesada", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("Matemática A", 5, "pesada", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("História A", 2, "media", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("Geografia A", 2, "media", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("Ciências A", 3, "media", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("Inglês A", 2, "leve", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("Arte A", 2, "leve", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        Disciplina("Educação Física A", 2, "pratica", ["6ano", "7ano", "8ano", "9ano"], "A"),
-        
-        # EF II - Grupo B
-        Disciplina("Português B", 5, "pesada", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        Disciplina("Matemática B", 5, "pesada", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        Disciplina("História B", 2, "media", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        Disciplina("Geografia B", 2, "media", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        Disciplina("Ciências B", 3, "media", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        Disciplina("Inglês B", 2, "leve", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        Disciplina("Arte B", 2, "leve", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        Disciplina("Educação Física B", 2, "pratica", ["6ano", "7ano", "8ano", "9ano"], "B"),
-        
-        # EM - Grupo A
-        Disciplina("Português A", 5, "pesada", ["1em", "2em", "3em"], "A"),
-        Disciplina("Matemática A", 5, "pesada", ["1em", "2em", "3em"], "A"),
-        Disciplina("História A", 3, "media", ["1em", "2em", "3em"], "A"),
-        Disciplina("Geografia A", 3, "media", ["1em", "2em", "3em"], "A"),
-        Disciplina("Biologia A", 3, "media", ["1em", "2em", "3em"], "A"),
-        Disciplina("Física A", 3, "pesada", ["1em", "2em", "3em"], "A"),
-        Disciplina("Química A", 3, "pesada", ["1em", "2em", "3em"], "A"),
-        Disciplina("Inglês A", 2, "leve", ["1em", "2em", "3em"], "A"),
-        Disciplina("Arte A", 1, "leve", ["1em", "2em", "3em"], "A"),
-        Disciplina("Educação Física A", 2, "pratica", ["1em", "2em", "3em"], "A"),
-        Disciplina("Filosofia A", 2, "media", ["1em", "2em", "3em"], "A"),
-        Disciplina("Sociologia A", 2, "media", ["1em", "2em", "3em"], "A"),
-        
-        # EM - Grupo B
-        Disciplina("Português B", 5, "pesada", ["1em", "2em", "3em"], "B"),
-        Disciplina("Matemática B", 5, "pesada", ["1em", "2em", "3em"], "B"),
-        Disciplina("História B", 3, "media", ["1em", "2em", "3em"], "B"),
-        Disciplina("Geografia B", 3, "media", ["1em", "2em", "3em"], "B"),
-        Disciplina("Biologia B", 3, "media", ["1em", "2em", "3em"], "B"),
-        Disciplina("Física B", 3, "pesada", ["1em", "2em", "3em"], "B"),
-        Disciplina("Química B", 3, "pesada", ["1em", "2em", "3em"], "B"),
-        Disciplina("Inglês B", 2, "leve", ["1em", "2em", "3em"], "B"),
-        Disciplina("Arte B", 1, "leve", ["1em", "2em", "3em"], "B"),
-        Disciplina("Educação Física B", 2, "pratica", ["1em", "2em", "3em"], "B"),
-        Disciplina("Filosofia B", 2, "media", ["1em", "2em", "3em"], "B"),
-        Disciplina("Sociologia B", 2, "media", ["1em", "2em", "3em"], "B"),
-    ]
-    
-    turmas = [
-        Turma("6anoA", "6ano", "manha", "A"),
-        Turma("7anoA", "7ano", "manha", "A"),
-        Turma("8anoA", "8ano", "manha", "A"),
-        Turma("9anoA", "9ano", "manha", "A"),
-        Turma("1emA", "1em", "manha", "A"),
-        Turma("2emA", "2em", "manha", "A"),
-        Turma("3emA", "3em", "manha", "A"),
-        Turma("6anoB", "6ano", "manha", "B"),
-        Turma("7anoB", "7ano", "manha", "B"),
-        Turma("8anoB", "8ano", "manha", "B"),
-        Turma("9anoB", "9ano", "manha", "B"),
-        Turma("1emB", "1em", "manha", "B"),
-        Turma("2emB", "2em", "manha", "B"),
-        Turma("3emB", "3em", "manha", "B"),
-    ]
-    
-    salas = [
-        Sala("Sala 1", 30, "normal"),
-        Sala("Sala 2", 30, "normal"),
-        Sala("Sala 3", 30, "normal"),
-        Sala("Laboratório de Ciências", 25, "laboratório"),
-        Sala("Auditório", 100, "auditório"),
-    ]
-    
-    return {
-        "professores": [p.__dict__ for p in professores],
-        "disciplinas": [d.__dict__ for d in disciplinas],
-        "turmas": [t.__dict__ for t in turmas],
-        "salas": [s.__dict__ for s in salas],
-        "aulas": [],
-        "feriados": [],
-        "periodos": []
-    }
-
-def init_db():
-    """Inicializa o banco de dados com dados padrão se não existir"""
-    if not os.path.exists(DB_FILE):
-        dados_iniciais = criar_dados_iniciais()
-        salvar_tudo(dados_iniciais)
-
-def carregar_tudo():
-    """Carrega todos os dados do banco"""
-    if not os.path.exists(DB_FILE):
-        init_db()
-    
-    try:
-        with open(DB_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except:
-        return criar_dados_iniciais()
-
-def salvar_tudo(dados):
-    """Salva todos os dados no banco"""
-    try:
-        with open(DB_FILE, 'w', encoding='utf-8') as f:
-            json.dump(dados, f, indent=2, ensure_ascii=False)
-        return True
-    except Exception as e:
-        print(f"Erro ao salvar: {e}")
-        return False
-
-# ✅ FUNÇÕES DE CARREGAMENTO COMPLETAMENTE CORRIGIDAS
-def carregar_turmas():
-    dados = carregar_tudo()
-    turmas = dados.get("turmas", [])
-    resultado = []
-    
-    for item in turmas:
-        # Se for dicionário, criar nova Turma
-        if isinstance(item, dict):
-            resultado.append(Turma(**item))
-        # Se já for objeto Turma, usar diretamente
-        elif hasattr(item, 'nome') and hasattr(item, 'serie'):
-            resultado.append(item)
-        # Caso contrário, pular item inválido
-        else:
-            print(f"Item inválido em turmas: {item}")
-    
-    return resultado
-
-def carregar_professores():
-    dados = carregar_tudo()
-    professores = dados.get("professores", [])
-    resultado = []
-    
-    for item in professores:
-        if isinstance(item, dict):
-            resultado.append(Professor(**item))
-        elif hasattr(item, 'nome') and hasattr(item, 'disciplinas'):
-            resultado.append(item)
-        else:
-            print(f"Item inválido em professores: {item}")
-    
-    return resultado
-
-def carregar_disciplinas():
-    dados = carregar_tudo()
-    disciplinas = dados.get("disciplinas", [])
-    resultado = []
-    
-    for item in disciplinas:
-        if isinstance(item, dict):
-            resultado.append(Disciplina(**item))
-        elif hasattr(item, 'nome') and hasattr(item, 'carga_semanal'):
-            resultado.append(item)
-        else:
-            print(f"Item inválido em disciplinas: {item}")
-    
-    return resultado
-
-def carregar_salas():
-    dados = carregar_tudo()
-    salas = dados.get("salas", [])
-    resultado = []
-    
-    for item in salas:
-        if isinstance(item, dict):
-            resultado.append(Sala(**item))
-        elif hasattr(item, 'nome') and hasattr(item, 'capacidade'):
-            resultado.append(item)
-        else:
-            print(f"Item inválido em salas: {item}")
-    
-    return resultado
-
-def carregar_grade():
-    dados = carregar_tudo()
-    aulas = dados.get("aulas", [])
-    resultado = []
-    
-    for item in aulas:
-        if isinstance(item, dict):
-            resultado.append(Aula(**item))
-        elif hasattr(item, 'turma') and hasattr(item, 'disciplina'):
-            resultado.append(item)
-        else:
-            print(f"Item inválido em aulas: {item}")
-    
-    return resultado
-
-def carregar_feriados():
-    dados = carregar_tudo()
-    return dados.get("feriados", [])
-
-def carregar_periodos():
-    dados = carregar_tudo()
-    return dados.get("periodos", [])
-
-# ✅ FUNÇÕES DE SALVAMENTO CORRIGIDAS
-def _converter_para_dict(obj):
-    """Converte objeto para dicionário se for um objeto models"""
-    if hasattr(obj, '__dict__'):
-        return obj.__dict__
-    return obj
-
-def salvar_turmas(turmas):
-    dados = carregar_tudo()
-    dados["turmas"] = [_converter_para_dict(t) for t in turmas]
-    return salvar_tudo(dados)
-
-def salvar_professores(professores):
-    dados = carregar_tudo()
-    dados["professores"] = [_converter_para_dict(p) for p in professores]
-    return salvar_tudo(dados)
-
-def salvar_disciplinas(disciplinas):
-    dados = carregar_tudo()
-    dados["disciplinas"] = [_converter_para_dict(d) for d in disciplinas]
-    return salvar_tudo(dados)
-
-def salvar_salas(salas):
-    dados = carregar_tudo()
-    dados["salas"] = [_converter_para_dict(s) for s in salas]
-    return salvar_tudo(dados)
-
-def salvar_grade(aulas):
-    dados = carregar_tudo()
-    dados["aulas"] = [_converter_para_dict(a) for a in aulas]
-    return salvar_tudo(dados)
-
-def salvar_feriados(feriados):
-    dados = carregar_tudo()
-    dados["feriados"] = feriados
-    return salvar_tudo(dados)
-
-def salvar_periodos(periodos):
-    dados = carregar_tudo()
-    dados["periodos"] = periodos
-    return salvar_tudo(dados)
-
-def resetar_banco():
-    """Reseta o banco de dados para os valores iniciais"""
-    if os.path.exists(DB_FILE):
-        os.remove(DB_FILE)
-    init_db()
-    return True    8: "12:20-13:10"
+# HORÁRIOS REAIS COM 8 PERÍODOS - ✅ CORRIGIDO
+HORARIOS_REAIS = {
+    1: "07:00-07:50",
+    2: "07:50-08:40",
+    3: "08:40-09:30",
+    4: "09:30-09:50", # INTERVALO
+    5: "09:50-10:40",
+    6: "10:40-11:30",
+    7: "11:30-12:20",
+    8: "12:20-13:10"
 }
+
+# Inicialização
+try:
+    init_session_state()
+    st.success("✅ Sistema inicializado com sucesso!")
+except Exception as e:
+    st.error(f"❌ Erro na inicialização: {str(e)}")
+    st.code(traceback.format_exc())
+    if st.button("🔄 Resetar Banco de Dados"):
+        database.resetar_banco()
+        st.rerun()
+    st.stop()
 
 # Função auxiliar
 def obter_grupo_seguro(objeto, opcoes=["A", "B", "AMBOS"]):
@@ -298,6 +55,41 @@ def calcular_carga_maxima(serie):
         return 32  # Ensino Médio: 32 horas
     else:
         return 25  # EF II: 25 horas
+
+# Função para converter entre formatos de dias
+def converter_dia_para_semana(dia):
+    """Converte dia do formato completo para abreviado (DIAS_SEMANA)"""
+    if dia == "segunda": return "seg"
+    elif dia == "terca": return "ter"
+    elif dia == "quarta": return "qua"
+    elif dia == "quinta": return "qui"
+    elif dia == "sexta": return "sex"
+    else: return dia
+
+def converter_dia_para_completo(dia):
+    """Converte dia do formato abreviado para completo"""
+    if dia == "seg": return "segunda"
+    elif dia == "ter": return "terca"
+    elif dia == "qua": return "quarta"
+    elif dia == "qui": return "quinta"
+    elif dia == "sex": return "sexta"
+    else: return dia
+
+def converter_disponibilidade_para_semana(disponibilidade):
+    """Converte conjunto de disponibilidade para formato DIAS_SEMANA"""
+    convertido = []
+    for dia in disponibilidade:
+        dia_convertido = converter_dia_para_semana(dia)
+        if dia_convertido in DIAS_SEMANA:
+            convertido.append(dia_convertido)
+    return convertido
+
+def converter_disponibilidade_para_completo(disponibilidade):
+    """Converte conjunto de disponibilidade para formato completo"""
+    convertido = set()
+    for dia in disponibilidade:
+        convertido.add(converter_dia_para_completo(dia))
+    return convertido
 
 # Menu de abas
 abas = st.tabs(["🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas", "🏫 Salas", "🗓️ Gerar Grade"])
@@ -479,7 +271,7 @@ with abas[2]:  # ABA PROFESSORES
                     with st.container():
                         st.write(f"**{dia.upper()}:**")
                         horarios_cols = st.columns(4)
-                        for i, horario in enumerate(HORARIOS_DISPONIVEIS):  # ✅ 8 HORÁRIOS
+                        for i, horario in enumerate(HORARIOS_DISPONIVEIS):
                             with horarios_cols[i % 4]:
                                 if st.checkbox(f"{horario}º", key=f"add_{dia}_{horario}"):
                                     horarios_indisponiveis.append(f"{dia}_{horario}")
@@ -487,10 +279,13 @@ with abas[2]:  # ABA PROFESSORES
             if st.form_submit_button("✅ Adicionar Professor"):
                 if nome and disciplinas and disponibilidade:
                     try:
+                        # Converter para formato completo para compatibilidade
+                        disponibilidade_completa = converter_disponibilidade_para_completo(disponibilidade)
+                        
                         novo_professor = Professor(
                             nome, 
                             disciplinas, 
-                            set(disponibilidade), 
+                            disponibilidade_completa, 
                             grupo,
                             set(horarios_indisponiveis)
                         )
@@ -533,10 +328,13 @@ with abas[2]:  # ABA PROFESSORES
                         key=f"grupo_prof_{prof.id}"
                     )
                 with col2:
+                    # ✅ CORREÇÃO: Converter disponibilidade para formato DIAS_SEMANA
+                    disponibilidade_convertida = converter_disponibilidade_para_semana(prof.disponibilidade)
+                    
                     nova_disponibilidade = st.multiselect(
                         "Dias Disponíveis", 
                         DIAS_SEMANA, 
-                        default=list(prof.disponibilidade),
+                        default=disponibilidade_convertida,
                         key=f"disp_prof_{prof.id}"
                     )
                     
@@ -546,7 +344,7 @@ with abas[2]:  # ABA PROFESSORES
                         with st.container():
                             st.write(f"**{dia.upper()}:**")
                             horarios_cols = st.columns(4)
-                            for i, horario in enumerate(HORARIOS_DISPONIVEIS):  # ✅ 8 HORÁRIOS
+                            for i, horario in enumerate(HORARIOS_DISPONIVEIS):
                                 with horarios_cols[i % 4]:
                                     checked = f"{dia}_{horario}" in prof.horarios_indisponiveis
                                     if st.checkbox(
@@ -564,7 +362,11 @@ with abas[2]:  # ABA PROFESSORES
                                 prof.nome = novo_nome
                                 prof.disciplinas = novas_disciplinas
                                 prof.grupo = novo_grupo
-                                prof.disponibilidade = set(nova_disponibilidade)
+                                
+                                # Converter de volta para formato completo
+                                disponibilidade_completa = converter_disponibilidade_para_completo(nova_disponibilidade)
+                                
+                                prof.disponibilidade = disponibilidade_completa
                                 prof.horarios_indisponiveis = set(novos_horarios_indisponiveis)
                                 
                                 if salvar_tudo():
@@ -953,22 +755,6 @@ with abas[5]:  # ABA GERAR GRADE
                             
                     except Exception as e:
                         st.error(f"❌ Erro ao gerar grade: {str(e)}")
-
-# Sidebar
-st.sidebar.title("⚙️ Configurações")
-if st.sidebar.button("🔄 Resetar Banco de Dados"):
-    try:
-        database.resetar_banco()
-        st.sidebar.success("✅ Banco resetado! Recarregue a página.")
-    except Exception as e:
-        st.sidebar.error(f"❌ Erro ao resetar: {str(e)}")
-
-st.sidebar.write("### Status do Sistema:")
-st.sidebar.write(f"**Turmas:** {len(st.session_state.turmas)}")
-st.sidebar.write(f"**Professores:** {len(st.session_state.professores)}")
-st.sidebar.write(f"**Disciplinas:** {len(st.session_state.disciplinas)}")
-st.sidebar.write(f"**Salas:** {len(st.session_state.salas)}")
-st.sidebar.write(f"**Aulas na Grade:** {len(st.session_state.get('aulas', []))}")
 
 # Sidebar
 st.sidebar.title("⚙️ Configurações")
