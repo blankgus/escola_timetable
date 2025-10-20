@@ -3,7 +3,7 @@ import pandas as pd
 import database
 from session_state import init_session_state
 from auto_save import salvar_tudo
-from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA, HORARIOS_DISPONIVEIS
+from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA, HORARIOS_EFII, HORARIOS_EM, HORARIOS_REAIS
 from scheduler_ortools import GradeHorariaORTools
 from simple_scheduler import SimpleGradeHoraria
 import io
@@ -11,19 +11,7 @@ import traceback
 
 # Configuração da página
 st.set_page_config(page_title="Escola Timetable", layout="wide")
-st.title("🕒 Gerador Inteligente de Grade Horária - Grupos A e B")
-
-# HORÁRIOS REAIS COM 8 PERÍODOS - ✅ CORRIGIDO
-HORARIOS_REAIS = {
-    1: "07:00-07:50",
-    2: "07:50-08:40",
-    3: "08:40-09:30",
-    4: "09:30-09:50", # INTERVALO
-    5: "09:50-10:40",
-    6: "10:40-11:30",
-    7: "11:30-12:20",
-    8: "12:20-13:10"
-}
+st.title("🕒 Gerador Inteligente de Grade Horária - Horários Reais")
 
 # Inicialização
 try:
@@ -47,6 +35,21 @@ def obter_grupo_seguro(objeto, opcoes=["A", "B", "AMBOS"]):
         return "A"
     except:
         return "A"
+
+def obter_segmento_turma(turma_nome):
+    """Determina o segmento da turma baseado no nome"""
+    if 'em' in turma_nome.lower():
+        return "EM"
+    else:
+        return "EF_II"
+
+def obter_horarios_turma(turma_nome):
+    """Retorna os horários disponíveis para a turma"""
+    segmento = obter_segmento_turma(turma_nome)
+    if segmento == "EM":
+        return HORARIOS_EM
+    else:
+        return HORARIOS_EFII
 
 # Função para calcular carga horária máxima por série
 def calcular_carga_maxima(serie):
@@ -107,20 +110,24 @@ with abas[0]:  # ABA INÍCIO
     with col4:
         st.metric("Salas", len(st.session_state.salas))
     
-    # Estatísticas por grupo
-    turmas_a = [t for t in st.session_state.turmas if obter_grupo_seguro(t) == "A"]
-    turmas_b = [t for t in st.session_state.turmas if obter_grupo_seguro(t) == "B"]
+    # Estatísticas por grupo e segmento
+    st.subheader("📊 Estatísticas por Segmento")
     
-    st.subheader("📊 Estatísticas por Grupo")
+    turmas_efii = [t for t in st.session_state.turmas if obter_segmento_turma(t.nome) == "EF_II"]
+    turmas_em = [t for t in st.session_state.turmas if obter_segmento_turma(t.nome) == "EM"]
+    
     col1, col2 = st.columns(2)
     with col1:
-        st.write("**Grupo A**")
-        st.write(f"Turmas: {len(turmas_a)}")
-        st.write(f"Disciplinas: {len([d for d in st.session_state.disciplinas if obter_grupo_seguro(d) == 'A'])}")
+        st.write("**Ensino Fundamental II**")
+        st.write(f"Turmas: {len(turmas_efii)}")
+        st.write(f"Horário: 07:50 - 12:20")
+        st.write(f"Períodos: 6 aulas + intervalo")
+        
     with col2:
-        st.write("**Grupo B**")
-        st.write(f"Turmas: {len(turmas_b)}")
-        st.write(f"Disciplinas: {len([d for d in st.session_state.disciplinas if obter_grupo_seguro(d) == 'B'])}")
+        st.write("**Ensino Médio**")
+        st.write(f"Turmas: {len(turmas_em)}")
+        st.write(f"Horário: 07:00 - 12:20/13:10")
+        st.write(f"Períodos: 7 aulas + intervalo")
     
     # Verificação de carga horária
     st.subheader("📈 Verificação de Carga Horária")
@@ -128,6 +135,7 @@ with abas[0]:  # ABA INÍCIO
         carga_total = 0
         disciplinas_turma = []
         grupo_turma = obter_grupo_seguro(turma)
+        segmento = obter_segmento_turma(turma.nome)
         
         # ✅ CORREÇÃO: Verificar disciplinas vinculadas DIRETAMENTE à turma
         for disc in st.session_state.disciplinas:
@@ -138,7 +146,7 @@ with abas[0]:  # ABA INÍCIO
         carga_maxima = calcular_carga_maxima(turma.serie)
         status = "✅" if carga_total <= carga_maxima else "❌"
         
-        st.write(f"**{turma.nome}** [{grupo_turma}] ({turma.serie}): {carga_total}/{carga_maxima}h {status}")
+        st.write(f"**{turma.nome}** [{grupo_turma}] ({segmento}): {carga_total}/{carga_maxima}h {status}")
         if disciplinas_turma:
             st.caption(f"Disciplinas: {', '.join(disciplinas_turma)}")
         else:
@@ -280,8 +288,10 @@ with abas[2]:  # ABA PROFESSORES
                 for dia in DIAS_SEMANA:
                     with st.container():
                         st.write(f"**{dia.upper()}:**")
+                        # Mostrar todos os horários possíveis (1-7)
                         horarios_cols = st.columns(4)
-                        for i, horario in enumerate(HORARIOS_DISPONIVEIS):
+                        horarios_todos = list(range(1, 8))
+                        for i, horario in enumerate(horarios_todos):
                             with horarios_cols[i % 4]:
                                 if st.checkbox(f"{horario}º", key=f"add_{dia}_{horario}"):
                                     horarios_indisponiveis.append(f"{dia}_{horario}")
@@ -350,11 +360,12 @@ with abas[2]:  # ABA PROFESSORES
                     
                     st.write("**Horários Indisponíveis:**")
                     novos_horarios_indisponiveis = []
+                    horarios_todos = list(range(1, 8))
                     for dia in DIAS_SEMANA:
                         with st.container():
                             st.write(f"**{dia.upper()}:**")
                             horarios_cols = st.columns(4)
-                            for i, horario in enumerate(HORARIOS_DISPONIVEIS):
+                            for i, horario in enumerate(horarios_todos):
                                 with horarios_cols[i % 4]:
                                     checked = f"{dia}_{horario}" in prof.horarios_indisponiveis
                                     if st.checkbox(
@@ -412,15 +423,14 @@ with abas[3]:  # ABA TURMAS
                 turno = st.selectbox("Turno*", ["manha"], disabled=True)
                 grupo = st.selectbox("Grupo*", ["A", "B"])
             
-            if serie:
-                carga_maxima = calcular_carga_maxima(serie)
-                nivel = "Ensino Médio" if carga_maxima == 32 else "EF II"
-                st.info(f"💡 {nivel}: Carga horária máxima semanal = {carga_maxima}h")
+            # Determinar segmento automaticamente
+            segmento = "EM" if serie and 'em' in serie.lower() else "EF_II"
+            st.info(f"💡 Segmento: {segmento} - {calcular_carga_maxima(serie)}h semanais máximas")
             
             if st.form_submit_button("✅ Adicionar Turma"):
                 if nome and serie:
                     try:
-                        nova_turma = Turma(nome, serie, "manha", grupo)
+                        nova_turma = Turma(nome, serie, "manha", grupo, segmento)
                         st.session_state.turmas.append(nova_turma)
                         if salvar_tudo():
                             st.success(f"✅ Turma '{nome}' adicionada!")
@@ -454,6 +464,12 @@ with abas[3]:  # ABA TURMAS
                         index=0 if obter_grupo_seguro(turma) == "A" else 1,
                         key=f"grupo_turma_{turma.id}"
                     )
+                
+                # Mostrar informações da turma
+                segmento = obter_segmento_turma(turma.nome)
+                horarios = obter_horarios_turma(turma.nome)
+                st.write(f"**Segmento:** {segmento}")
+                st.write(f"**Horários disponíveis:** {len(horarios)} períodos")
                 
                 grupo_turma = obter_grupo_seguro(turma)
                 carga_atual = 0
@@ -601,10 +617,11 @@ with abas[5]:  # ABA GERAR GRADE
             ["Algoritmo Simples (Rápido)", "Google OR-Tools (Otimizado)"]
         )
         
-        relaxar_horarios = st.checkbox(
-            "Relaxar horários ideais",
-            value=False,
-            help="Permitir disciplinas pesadas em qualquer horário"
+        dias_em_estendido = st.multiselect(
+            "Dias EM até 13:10",
+            DIAS_SEMANA,
+            default=["ter", "qui"],
+            help="Dias que o Ensino Médio terá aula até 13:10"
         )
     
     st.subheader("📊 Pré-análise de Viabilidade")
@@ -654,8 +671,11 @@ with abas[5]:  # ABA GERAR GRADE
         if aulas_turma > carga_maxima:
             problemas_carga.append(f"{turma.nome} [{grupo_turma}]: {aulas_turma}h > {carga_maxima}h máximo")
     
-    # ✅ CAPACIDADE COM 8 HORÁRIOS
-    capacidade_total = len(DIAS_SEMANA) * len(HORARIOS_DISPONIVEIS) * len(turmas_filtradas)
+    # ✅ CAPACIDADE COM HORÁRIOS REAIS
+    capacidade_total = 0
+    for turma in turmas_filtradas:
+        horarios_turma = obter_horarios_turma(turma.nome)
+        capacidade_total += len(DIAS_SEMANA) * len(horarios_turma)
     
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -698,13 +718,14 @@ with abas[5]:  # ABA GERAR GRADE
                         else:
                             professores_filtrados = st.session_state.professores
                         
+                        # ✅ PASSAR DIAS EM ESTENDIDO PARA O SCHEDULER
                         if tipo_algoritmo == "Google OR-Tools (Otimizado)":
                             try:
                                 grade = GradeHorariaORTools(
                                     turmas_filtradas,
                                     professores_filtrados,
                                     disciplinas_filtradas,
-                                    relaxar_horario_ideal=relaxar_horarios
+                                    dias_em_estendido=dias_em_estendido
                                 )
                                 aulas = grade.resolver()
                                 metodo = "Google OR-Tools"
@@ -713,7 +734,8 @@ with abas[5]:  # ABA GERAR GRADE
                                 simple_grade = SimpleGradeHoraria(
                                     turmas_filtradas,
                                     professores_filtrados,
-                                    disciplinas_filtradas
+                                    disciplinas_filtradas,
+                                    dias_em_estendido=dias_em_estendido
                                 )
                                 aulas = simple_grade.gerar_grade()
                                 metodo = "Algoritmo Simples (fallback)"
@@ -721,7 +743,8 @@ with abas[5]:  # ABA GERAR GRADE
                             simple_grade = SimpleGradeHoraria(
                                 turmas_filtradas,
                                 professores_filtrados,
-                                disciplinas_filtradas
+                                disciplinas_filtradas,
+                                dias_em_estendido=dias_em_estendido
                             )
                             aulas = simple_grade.gerar_grade()
                             metodo = "Algoritmo Simples"
@@ -734,13 +757,112 @@ with abas[5]:  # ABA GERAR GRADE
                             st.success(f"✅ Grade {grupo_texto} gerada com {metodo}! ({len(aulas)} aulas)")
                         
                         if aulas:
+                            # ✅ NOVA VISUALIZAÇÃO: Grade em formato de calendário
+                            st.subheader("📅 Visualização da Grade Horária - Formato Calendário")
+                            
+                            # Criar grades para cada turma
+                            turmas_com_aulas = list(set(a.turma for a in aulas))
+                            
+                            for turma_nome in turmas_com_aulas:
+                                st.write(f"#### 🎒 Grade da Turma: {turma_nome}")
+                                
+                                # Filtrar aulas da turma
+                                aulas_turma = [a for a in aulas if a.turma == turma_nome]
+                                
+                                # Criar matriz da grade
+                                dias_ordenados = ["segunda", "terca", "quarta", "quinta", "sexta"]
+                                segmento = obter_segmento_turma(turma_nome)
+                                horarios_ordenados = obter_horarios_turma(turma_nome)
+                                
+                                # Criar grade visual
+                                st.markdown("""
+                                <style>
+                                .grade-table {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                }
+                                .grade-table th, .grade-table td {
+                                    border: 1px solid #ddd;
+                                    padding: 8px;
+                                    text-align: center;
+                                }
+                                .grade-table th {
+                                    background-color: #f2f2f2;
+                                    font-weight: bold;
+                                }
+                                .horario-livre {
+                                    background-color: #f8f9fa;
+                                    color: #6c757d;
+                                }
+                                .horario-aula {
+                                    background-color: #d1ecf1;
+                                    color: #0c5460;
+                                }
+                                .horario-intervalo {
+                                    background-color: #fff3cd;
+                                    color: #856404;
+                                    font-weight: bold;
+                                }
+                                </style>
+                                """, unsafe_allow_html=True)
+                                
+                                # Criar tabela HTML
+                                table_html = """
+                                <table class='grade-table'>
+                                    <tr>
+                                        <th>Horário</th>
+                                        <th>Segunda</th>
+                                        <th>Terça</th>
+                                        <th>Quarta</th>
+                                        <th>Quinta</th>
+                                        <th>Sexta</th>
+                                    </tr>
+                                """
+                                
+                                for horario in horarios_ordenados:
+                                    table_html += f"<tr><td><strong>{HORARIOS_REAIS[horario]}</strong></td>"
+                                    
+                                    for dia in dias_ordenados:
+                                        # Encontrar aula neste horário e dia
+                                        aula_no_slot = next((a for a in aulas_turma if a.dia == dia and a.horario == horario), None)
+                                        
+                                        # Verificar se é horário de intervalo
+                                        if horario == 3 and segmento == "EF_II":  # EF II: intervalo no horário 3
+                                            table_html += "<td class='horario-intervalo'>🕛 INTERVALO</td>"
+                                        elif horario == 4 and segmento == "EM":  # EM: intervalo no horário 4
+                                            table_html += "<td class='horario-intervalo'>🕛 INTERVALO</td>"
+                                        elif aula_no_slot:
+                                            table_html += f"<td class='horario-aula'>{aula_no_slot.disciplina}<br><small>{aula_no_slot.professor}</small></td>"
+                                        else:
+                                            table_html += "<td class='horario-livre'>LIVRE</td>"
+                                    
+                                    table_html += "</tr>"
+                                
+                                table_html += "</table>"
+                                st.markdown(table_html, unsafe_allow_html=True)
+                                
+                                # Informações da turma
+                                st.caption(f"Segmento: {segmento} | Horários: {len(horarios_ordenados)} períodos")
+                                
+                                # Legenda
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.markdown("🟦 **Aula Normal**")
+                                with col2:
+                                    st.markdown("🟨 **Intervalo**")
+                                with col3:
+                                    st.markdown("⬜ **Horário Livre**")
+                                
+                                st.markdown("---")
+                            
+                            # Dataframe original (mantido para compatibilidade)
                             df_aulas = pd.DataFrame([
                                 {
                                     "Turma": a.turma,
                                     "Disciplina": a.disciplina, 
                                     "Professor": a.professor,
                                     "Dia": a.dia,
-                                    "Horário": f"{a.horario}º",
+                                    "Horário": f"{a.horario}º ({HORARIOS_REAIS[a.horario]})",
                                     "Sala": a.sala,
                                     "Grupo": a.grupo
                                 }
@@ -748,15 +870,32 @@ with abas[5]:  # ABA GERAR GRADE
                             ])
                             
                             df_aulas = df_aulas.sort_values(["Turma", "Dia", "Horário"])
+                            st.subheader("📊 Lista Detalhada das Aulas")
                             st.dataframe(df_aulas, use_container_width=True)
                             
+                            # Download Excel
                             output = io.BytesIO()
                             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                                 df_aulas.to_excel(writer, sheet_name="Grade_Completa", index=False)
-                                stats_df = pd.DataFrame({
-                                    "Estatística": ["Total de Aulas", "Professores Utilizados", "Turmas com Aula", "Método"],
-                                    "Valor": [len(aulas), len(set(a.professor for a in aulas)), len(set(a.turma for a in aulas)), metodo]
-                                })
+                                
+                                # Adicionar estatísticas
+                                stats_data = {
+                                    "Estatística": [
+                                        "Total de Aulas", 
+                                        "Professores Utilizados", 
+                                        "Turmas com Aula", 
+                                        "Método",
+                                        "Dias EM Estendido"
+                                    ],
+                                    "Valor": [
+                                        len(aulas), 
+                                        len(set(a.professor for a in aulas)), 
+                                        len(set(a.turma for a in aulas)), 
+                                        metodo,
+                                        ", ".join(dias_em_estendido) if dias_em_estendido else "Nenhum"
+                                    ]
+                                }
+                                stats_df = pd.DataFrame(stats_data)
                                 stats_df.to_excel(writer, sheet_name="Estatísticas", index=False)
                             
                             st.download_button(
@@ -770,76 +909,7 @@ with abas[5]:  # ABA GERAR GRADE
                             
                     except Exception as e:
                         st.error(f"❌ Erro ao gerar grade: {str(e)}")
-                        with abas[5]:  # ABA GERAR GRADE
-    # ... (código anterior mantido)
-    
-    if st.button("🚀 Gerar Grade Horária", type="primary", use_container_width=True):
-        # ... (código de geração mantido)
-        
-        if aulas:
-            # ... (código do dataframe mantido)
-            
-            st.subheader("📅 Visualização da Grade Horária")
-            
-            # ✅ NOVA VISUALIZAÇÃO: Grade em formato de calendário
-            st.info("🎯 Visualização Semanal - Formato Calendário")
-            
-            # Criar grades para cada turma
-            turmas_com_aulas = list(set(a.turma for a in aulas))
-            
-            for turma_nome in turmas_com_aulas:
-                st.write(f"### 🎒 Grade da Turma: {turma_nome}")
-                
-                # Filtrar aulas da turma
-                aulas_turma = [a for a in aulas if a.turma == turma_nome]
-                
-                # Criar matriz da grade
-                dias_ordenados = ["segunda", "terca", "quarta", "quinta", "sexta"]
-                horarios_ordenados = [1, 2, 3, 4, 5, 6, 7, 8]
-                
-                # Criar dataframe vazio
-                grade_data = []
-                for horario in horarios_ordenados:
-                    linha = {"Horário": HORARIOS_REAIS[horario]}
-                    for dia in dias_ordenados:
-                        # Encontrar aula neste horário e dia
-                        aula_no_slot = next((a for a in aulas_turma if a.dia == dia and a.horario == horario), None)
-                        if aula_no_slot:
-                            linha[dia] = f"{aula_no_slot.disciplina}\n({aula_no_slot.professor})"
-                        else:
-                            linha[dia] = "Livre"
-                    grade_data.append(linha)
-                
-                # Criar DataFrame
-                df_grade = pd.DataFrame(grade_data)
-                
-                # Estilizar a grade
-                def colorizar_celulas(val):
-                    if val == "Livre":
-                        return 'background-color: #f8f9fa; color: #6c757d;'
-                    elif "Intervalo" in val:
-                        return 'background-color: #fff3cd; color: #856404; font-weight: bold;'
-                    else:
-                        return 'background-color: #d1ecf1; color: #0c5460;'
-                
-                # Aplicar estilo
-                styled_df = df_grade.style.applymap(colorizar_celulas, subset=dias_ordenados)
-                
-                # Exibir grade
-                st.dataframe(styled_df, use_container_width=True, height=400)
-                
-                # Adicionar legenda
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.markdown("🟦 **Aula Normal**")
-                with col2:
-                    st.markdown("🟨 **Intervalo**")
-                with col3:
-                    st.markdown("⬜ **Horário Livre**")
-                
-                st.markdown("---")
-
-            # ... (resto do código mantido - download Excel, etc)
+                        st.code(traceback.format_exc())
 
 # Sidebar
 st.sidebar.title("⚙️ Configurações")
@@ -857,10 +927,11 @@ st.sidebar.write(f"**Disciplinas:** {len(st.session_state.disciplinas)}")
 st.sidebar.write(f"**Salas:** {len(st.session_state.salas)}")
 st.sidebar.write(f"**Aulas na Grade:** {len(st.session_state.get('aulas', []))}")
 
-st.sidebar.write("### 💡 Informações:")
-st.sidebar.write("**Carga Horária Máxima:**")
-st.sidebar.write("- EF II: 25h semanais")
-st.sidebar.write("- EM: 32h semanais")
+st.sidebar.write("### 💡 Informações dos Horários:")
+st.sidebar.write("**EF II:** 07:50-12:20")
+st.sidebar.write("- 6 períodos + intervalo")
+st.sidebar.write("**EM:** 07:00-12:20/13:10")
+st.sidebar.write("- 7 períodos + intervalo")
 
 st.sidebar.write("### 🕒 Horários Reais:")
 for horario, periodo in HORARIOS_REAIS.items():
