@@ -97,9 +97,9 @@ def converter_disponibilidade_para_completo(disponibilidade):
 def eh_horario_intervalo_prof(horario, segmento_turma=None):
     """Verifica se é horário de intervalo"""
     if segmento_turma == "EF_II":
-        return horario == 3  # EF II: intervalo no 3º horário
+        return horario == 3  # EF II: intervalo no 3º horário (09:30-09:50)
     elif segmento_turma == "EM":
-        return horario == 4  # EM: intervalo no 4º horário
+        return horario == 4  # EM: intervalo no 4º horário (09:30-09:50)
     return False
 
 # Menu de abas

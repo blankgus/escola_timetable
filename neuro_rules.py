@@ -1,193 +1,235 @@
 """
-NEURO RULES - Regras Inteligentes para Grade Horária
-Configurações específicas para EM e EF II
+NEURO RULES - Configurações inteligentes para horários e cargas
 """
 
-# CONFIGURAÇÕES DE HORÁRIOS POR SEGMENTO
-CONFIG_HORARIOS = {
+# ================= CONFIGURAÇÕES DE HORÁRIOS =================
+
+HORARIOS_NEURO = {
     'EF_II': {
-        'nome': 'Ensino Fundamental II',
         'inicio': '07:50',
         'fim': '12:20',
-        'horarios_disponiveis': [1, 2, 3, 4, 5, 6],  # 6 períodos
-        'horario_intervalo': 3,  # Intervalo no 3º horário
-        'carga_horaria_maxima': 25,
-        'dias_semana': 5
+        'aulas_antes_intervalo': 2,  # 2 aulas antes do intervalo
+        'aulas_depois_intervalo': 4,  # 4 aulas depois do intervalo
+        'total_periodos': 6,
+        'carga_maxima_semanal': 25,
+        'intervalo_horario': 3  # Intervalo no 3º horário
     },
     'EM': {
-        'nome': 'Ensino Médio', 
         'inicio': '07:00',
-        'fim': '13:10',
-        'horarios_disponiveis': [1, 2, 3, 4, 5, 6, 7],  # 7 períodos
-        'horario_intervalo': 4,  # Intervalo no 4º horário
-        'carga_horaria_maxima': 35,
-        'dias_semana': 5
+        'fim': '13:10',  # ✅ CORREÇÃO: SEMPRE até 13:10
+        'aulas_antes_intervalo': 3,  # 3 aulas antes do intervalo
+        'aulas_depois_intervalo': 4,  # 4 aulas depois do intervalo  
+        'total_periodos': 7,
+        'carga_maxima_semanal': 35,  # ✅ CORREÇÃO: 35 horas
+        'intervalo_horario': 4  # Intervalo no 4º horário
     }
 }
 
-# CARGA HORÁRIA RECOMENDADA POR DISCIPLINA - EM
-CARGA_HORARIA_EM = {
-    'Português': 5,
-    'Matemática': 5,
-    'História': 3,
-    'Geografia': 3,
-    'Física': 3,
-    'Química': 3,
-    'Biologia': 3,
-    'Inglês': 3,
-    'Arte': 2,
-    'Educação Física': 2,
-    'Filosofia': 2,
-    'Sociologia': 2,
-    'Informática': 2
+# ================= CONFIGURAÇÕES DE DISCIPLINAS EM =================
+
+DISCIPLINAS_EM = {
+    '1em': {
+        'Portugues': 5,
+        'Matematica': 5,
+        'Historia': 3,
+        'Geografia': 3,
+        'Biologia': 3,
+        'Fisica': 3,
+        'Quimica': 3,
+        'Ingles': 3,
+        'Arte': 2,
+        'Educacao Fisica': 2,
+        'Filosofia': 2,
+        'Sociologia': 2,
+        'Informatica': 2
+    },
+    '2em': {
+        'Portugues': 5,
+        'Matematica': 5,
+        'Historia': 3,
+        'Geografia': 3,
+        'Biologia': 3,
+        'Fisica': 3,
+        'Quimica': 3,
+        'Ingles': 3,
+        'Arte': 2,
+        'Educacao Fisica': 2,
+        'Filosofia': 2,
+        'Sociologia': 2,
+        'Informatica': 2
+    },
+    '3em': {
+        'Portugues': 5,
+        'Matematica': 5,
+        'Historia': 3,
+        'Geografia': 3,
+        'Biologia': 3,
+        'Fisica': 3,
+        'Quimica': 3,
+        'Ingles': 3,
+        'Arte': 2,
+        'Educacao Fisica': 2,
+        'Filosofia': 2,
+        'Sociologia': 2,
+        'Informatica': 2
+    }
 }
 
-# CARGA HORÁRIA RECOMENDADA POR DISCIPLINA - EF II
-CARGA_HORARIA_EFII = {
-    'Português': 4,
-    'Matemática': 5,
-    'História': 3,
-    'Geografia': 3,
-    'Ciências': 3,
-    'Inglês': 2,
-    'Arte': 2,
-    'Educação Física': 2,
-    'Informática': 2,
-    'Dinâmica': 1,
-    'Vida Prática': 1
+# ================= CONFIGURAÇÕES DE DISCIPLINAS EF II =================
+
+DISCIPLINAS_EF_II = {
+    '6ano': {
+        'Portugues': 4,
+        'Matematica': 5,
+        'Historia': 3,
+        'Geografia': 3,
+        'Ciencias': 3,
+        'Ingles': 2,
+        'Arte': 2,
+        'Educacao Fisica': 2,
+        'Informatica': 2,
+        'Dinamica': 1,
+        'Vida Pratica': 1
+    },
+    '7ano': {
+        'Portugues': 4,
+        'Matematica': 5,
+        'Historia': 3,
+        'Geografia': 3,
+        'Ciencias': 3,
+        'Ingles': 2,
+        'Arte': 2,
+        'Educacao Fisica': 2,
+        'Informatica': 2,
+        'Dinamica': 1,
+        'Vida Pratica': 1
+    },
+    '8ano': {
+        'Portugues': 4,
+        'Matematica': 5,
+        'Historia': 3,
+        'Geografia': 3,
+        'Ciencias': 3,
+        'Ingles': 2,
+        'Arte': 2,
+        'Educacao Fisica': 2,
+        'Informatica': 2,
+        'Dinamica': 1,
+        'Vida Pratica': 1
+    },
+    '9ano': {
+        'Portugues': 4,
+        'Matematica': 5,
+        'Historia': 3,
+        'Geografia': 3,
+        'Ciencias': 3,
+        'Ingles': 2,
+        'Arte': 2,
+        'Educacao Fisica': 2,
+        'Informatica': 2,
+        'Dinamica': 1,
+        'Vida Pratica': 1
+    }
 }
 
-# PROFESSORES REAIS COM SUAS DISCIPLINAS
-PROFESSORES_CONFIG = {
-    # LINGUAGENS
-    'Heliana': ['Português A', 'Português B'],
-    'Deise': ['Português A', 'Português B'],
-    'Loide': ['Português A', 'Português B'],
-    'Maria Luiza': ['Inglês A', 'Inglês B'],
-    'Vanessa': ['Arte A', 'Arte B'],
-    
-    # MATEMÁTICA
-    'Tatiane': ['Matemática A', 'Matemática B'],
-    'Ricardo': ['Matemática A', 'Matemática B'],
-    
-    # CIÊNCIAS HUMANAS
-    'Laís': ['História A', 'História B'],
-    'Waldemar': ['História A', 'História B'],
-    'Rene': ['Geografia A', 'Geografia B'],
-    'Gisele': ['Geografia A', 'Geografia B'],
-    'Anna Maria': ['Filosofia A', 'Filosofia B', 'Sociologia A', 'Sociologia B'],
-    
-    # CIÊNCIAS DA NATUREZA
-    'Marina': ['Biologia A', 'Biologia B', 'Ciências A', 'Ciências B'],
-    'Vladmir': ['Química A', 'Química B'],
-    'Zabuor': ['Química A', 'Química B'],
-    'César': ['Física A', 'Física B', 'Informática A', 'Informática B'],
-    
-    # EDUCAÇÃO FÍSICA E OUTRAS
-    'Marcão': ['Educação Física A', 'Educação Física B'],
-    'Andréia': ['Educação Física A', 'Educação Física B'],
-    'Andréia Barreto': ['Dinâmica A', 'Dinâmica B', 'Vida Pratica A', 'Vida Pratica B']
-}
+# ================= PROFESSORES REAIS =================
 
-# SALAS DISPONÍVEIS
-SALAS_CONFIG = [
-    {'nome': 'Sala 1', 'capacidade': 30, 'tipo': 'normal'},
-    {'nome': 'Sala 2', 'capacidade': 30, 'tipo': 'normal'},
-    {'nome': 'Sala 3', 'capacidade': 30, 'tipo': 'normal'},
-    {'nome': 'Sala 4', 'capacidade': 30, 'tipo': 'normal'},
-    {'nome': 'Sala 5', 'capacidade': 30, 'tipo': 'normal'},
-    {'nome': 'Sala 6', 'capacidade': 30, 'tipo': 'normal'},
-    {'nome': 'Sala 7', 'capacidade': 30, 'tipo': 'normal'},
-    {'nome': 'Sala 8', 'capacidade': 30, 'tipo': 'normal'},
-    {'nome': 'Sala 9', 'capacidade': 30, 'tipo': 'normal'},
-    {'nome': 'Sala 10', 'capacidade': 30, 'tipo': 'normal'},
-    {'nome': 'Laboratório de Ciências', 'capacidade': 25, 'tipo': 'laboratório'},
-    {'nome': 'Laboratório de Informática', 'capacidade': 20, 'tipo': 'laboratório'},
-    {'nome': 'Auditório', 'capacidade': 100, 'tipo': 'auditório'},
+PROFESSORES_NEURO = [
+    # Língua Portuguesa
+    {"nome": "Heliana", "disciplinas": ["Portugues A", "Portugues B"], "grupo": "AMBOS"},
+    {"nome": "Deise", "disciplinas": ["Portugues A", "Portugues B"], "grupo": "AMBOS"},
+    {"nome": "Loide", "disciplinas": ["Portugues A", "Portugues B"], "grupo": "AMBOS"},
+    
+    # Matemática
+    {"nome": "Tatiane", "disciplinas": ["Matematica A", "Matematica B"], "grupo": "AMBOS"},
+    {"nome": "Ricardo", "disciplinas": ["Matematica A", "Matematica B"], "grupo": "AMBOS"},
+    
+    # História
+    {"nome": "Laís", "disciplinas": ["Historia A", "Historia B"], "grupo": "AMBOS"},
+    {"nome": "Waldemar", "disciplinas": ["Historia A", "Historia B"], "grupo": "AMBOS"},
+    
+    # Geografia
+    {"nome": "Rene", "disciplinas": ["Geografia A", "Geografia B"], "grupo": "AMBOS"},
+    {"nome": "Gisele", "disciplinas": ["Geografia A", "Geografia B"], "grupo": "AMBOS"},
+    
+    # Ciências/Biologia
+    {"nome": "Marina", "disciplinas": ["Ciencias A", "Ciencias B", "Biologia A", "Biologia B"], "grupo": "AMBOS"},
+    
+    # Física/Química/Informática
+    {"nome": "César", "disciplinas": ["Fisica A", "Fisica B", "Quimica A", "Quimica B", "Informatica A", "Informatica B"], "grupo": "AMBOS"},
+    {"nome": "Vladmir", "disciplinas": ["Quimica A", "Quimica B"], "grupo": "AMBOS"},
+    {"nome": "Zabuor", "disciplinas": ["Quimica A", "Quimica B"], "grupo": "AMBOS"},
+    
+    # Filosofia/Sociologia
+    {"nome": "Anna Maria", "disciplinas": ["Filosofia A", "Filosofia B", "Sociologia A", "Sociologia B"], "grupo": "AMBOS"},
+    
+    # Educação Física
+    {"nome": "Marcão", "disciplinas": ["Educacao Fisica A", "Educacao Fisica B"], "grupo": "AMBOS"},
+    {"nome": "Andréia", "disciplinas": ["Educacao Fisica A", "Educacao Fisica B"], "grupo": "AMBOS"},
+    
+    # Arte
+    {"nome": "Vanessa", "disciplinas": ["Arte A", "Arte B"], "grupo": "AMBOS"},
+    
+    # Inglês
+    {"nome": "Maria Luiza", "disciplinas": ["Ingles A", "Ingles B"], "grupo": "AMBOS"},
+    
+    # Dinâmica/Vida Prática
+    {"nome": "Andréia Barreto", "disciplinas": ["Dinamica A", "Dinamica B", "Vida Pratica A", "Vida Pratica B"], "grupo": "AMBOS"},
 ]
 
+# ================= SALAS =================
+
+SALAS_NEURO = [
+    {"nome": "Sala 1", "capacidade": 30, "tipo": "normal"},
+    {"nome": "Sala 2", "capacidade": 30, "tipo": "normal"},
+    {"nome": "Sala 3", "capacidade": 30, "tipo": "normal"},
+    {"nome": "Sala 4", "capacidade": 30, "tipo": "normal"},
+    {"nome": "Sala 5", "capacidade": 30, "tipo": "normal"},
+    {"nome": "Sala 6", "capacidade": 30, "tipo": "normal"},
+    {"nome": "Sala 7", "capacidade": 30, "tipo": "normal"},
+    {"nome": "Sala 8", "capacidade": 30, "tipo": "normal"},
+    {"nome": "Sala 9", "capacidade": 30, "tipo": "normal"},
+    {"nome": "Sala 10", "capacidade": 30, "tipo": "normal"},
+    {"nome": "Laboratório de Ciências", "capacidade": 25, "tipo": "laboratorio"},
+    {"nome": "Laboratório de Informática", "capacidade": 25, "tipo": "laboratorio"},
+    {"nome": "Auditório", "capacidade": 100, "tipo": "auditorio"},
+]
+
+# ================= FUNÇÕES AUXILIARES =================
+
 def obter_config_segmento(segmento):
-    """Retorna configurações para o segmento"""
-    return CONFIG_HORARIOS.get(segmento, CONFIG_HORARIOS['EF_II'])
+    """Retorna configurações do segmento"""
+    return HORARIOS_NEURO.get(segmento, HORARIOS_NEURO['EF_II'])
 
-def obter_carga_horaria_recomendada(disciplina_nome, segmento):
-    """Retorna carga horária recomendada para disciplina"""
-    if segmento == 'EM':
-        # Remove sufixo A/B para encontrar carga base
-        nome_base = disciplina_nome.replace(' A', '').replace(' B', '')
-        return CARGA_HORARIA_EM.get(nome_base, 3)
+def obter_carga_maxima(serie):
+    """Retorna carga máxima baseada na série"""
+    if 'em' in serie.lower():
+        return 35  # EM: 35 horas
     else:
-        nome_base = disciplina_nome.replace(' A', '').replace(' B', '')
-        return CARGA_HORARIA_EFII.get(nome_base, 2)
+        return 25  # EF II: 25 horas
 
-def validar_carga_horaria_turma(turma_nome, disciplinas_vinculadas):
+def obter_disciplinas_por_serie(serie, grupo):
+    """Retorna disciplinas e carga horária para uma série"""
+    if 'em' in serie.lower():
+        serie_key = '1em' if '1' in serie else '2em' if '2' in serie else '3em'
+        disciplinas = DISCIPLINAS_EM.get(serie_key, {})
+    else:
+        serie_key = '6ano' if '6' in serie else '7ano' if '7' in serie else '8ano' if '8' in serie else '9ano'
+        disciplinas = DISCIPLINAS_EF_II.get(serie_key, {})
+    
+    # Adicionar sufixo do grupo (A/B)
+    return {f"{nome} {grupo}": carga for nome, carga in disciplinas.items()}
+
+def validar_carga_horaria(turma_nome, serie, grupo):
     """Valida se a carga horária está dentro do limite"""
-    from app import obter_segmento_turma, calcular_carga_maxima
-    
-    segmento = obter_segmento_turma(turma_nome)
-    carga_maxima = calcular_carga_maxima(turma_nome.split('ano')[0] + 'ano' if 'ano' in turma_nome else turma_nome)
-    
-    carga_total = sum(disc.carga_semanal for disc in disciplinas_vinculadas)
+    disciplinas = obter_disciplinas_por_serie(serie, grupo)
+    carga_total = sum(disciplinas.values())
+    carga_maxima = obter_carga_maxima(serie)
     
     return {
-        'valido': carga_total <= carga_maxima,
-        'carga_atual': carga_total,
+        'turma': turma_nome,
+        'carga_total': carga_total,
         'carga_maxima': carga_maxima,
+        'dentro_limite': carga_total <= carga_maxima,
         'diferenca': carga_maxima - carga_total
     }
-
-def gerar_disciplinas_por_segmento():
-    """Gera lista de disciplinas organizadas por segmento"""
-    disciplinas_em_a = []
-    disciplinas_em_b = []
-    disciplinas_efii_a = []
-    disciplinas_efii_b = []
-    
-    # Disciplinas do EM
-    for disc_base, carga in CARGA_HORARIA_EM.items():
-        disciplinas_em_a.append({
-            'nome': f'{disc_base} A',
-            'carga_semanal': carga,
-            'tipo': 'pesada' if disc_base in ['Português', 'Matemática', 'Física', 'Química'] else 'media',
-            'turmas': ['1emA', '2emA', '3emA'],
-            'grupo': 'A'
-        })
-        disciplinas_em_b.append({
-            'nome': f'{disc_base} B',
-            'carga_semanal': carga,
-            'tipo': 'pesada' if disc_base in ['Português', 'Matemática', 'Física', 'Química'] else 'media',
-            'turmas': ['1emB', '2emB', '3emB'],
-            'grupo': 'B'
-        })
-    
-    # Disciplinas do EF II
-    for disc_base, carga in CARGA_HORARIA_EFII.items():
-        disciplinas_efii_a.append({
-            'nome': f'{disc_base} A',
-            'carga_semanal': carga,
-            'tipo': 'pesada' if disc_base in ['Português', 'Matemática'] else 'media',
-            'turmas': ['6anoA', '7anoA', '8anoA', '9anoA'],
-            'grupo': 'A'
-        })
-        disciplinas_efii_b.append({
-            'nome': f'{disc_base} B',
-            'carga_semanal': carga,
-            'tipo': 'pesada' if disc_base in ['Português', 'Matemática'] else 'media',
-            'turmas': ['6anoB', '7anoB', '8anoB', '9anoB'],
-            'grupo': 'B'
-        })
-    
-    return {
-        'EM_A': disciplinas_em_a,
-        'EM_B': disciplinas_em_b,
-        'EFII_A': disciplinas_efii_a,
-        'EFII_B': disciplinas_efii_b
-    }
-
-def obter_professor_para_disciplina(disciplina_nome):
-    """Encontra professores que podem ministrar a disciplina"""
-    professores_compatíveis = []
-    for professor, disciplinas in PROFESSORES_CONFIG.items():
-        if disciplina_nome in disciplinas:
-            professores_compatíveis.append(professor)
-    return professores_compatíveis

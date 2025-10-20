@@ -2,6 +2,7 @@ import streamlit as st
 from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA
 import database
 import uuid
+from neuro_rules import PROFESSORES_NEURO, SALAS_NEURO, obter_disciplinas_por_serie
 
 def init_session_state():
     database.init_db()
@@ -37,71 +38,109 @@ def init_session_state():
 
 def criar_turmas_padrao():
     return [
-        Turma("6anoA", "6ano", "manha", "A"),
-        Turma("7anoA", "7ano", "manha", "A"),
-        Turma("8anoA", "8ano", "manha", "A"),
-        Turma("9anoA", "9ano", "manha", "A"),
-        Turma("1emA", "1em", "manha", "A"),
-        Turma("2emA", "2em", "manha", "A"),
-        Turma("3emA", "3em", "manha", "A"),
-        Turma("6anoB", "6ano", "tarde", "B"),
-        Turma("7anoB", "7ano", "tarde", "B"),
-        Turma("8anoB", "8ano", "tarde", "B"),
-        Turma("9anoB", "9ano", "tarde", "B"),
-        Turma("1emB", "1em", "tarde", "B"),
-        Turma("2emB", "2em", "tarde", "B"),
-        Turma("3emB", "3em", "tarde", "B"),
+        # EF II
+        Turma("6anoA", "6ano", "manha", "A", "EF_II"),
+        Turma("7anoA", "7ano", "manha", "A", "EF_II"),
+        Turma("8anoA", "8ano", "manha", "A", "EF_II"),
+        Turma("9anoA", "9ano", "manha", "A", "EF_II"),
+        Turma("6anoB", "6ano", "manha", "B", "EF_II"),
+        Turma("7anoB", "7ano", "manha", "B", "EF_II"),
+        Turma("8anoB", "8ano", "manha", "B", "EF_II"),
+        Turma("9anoB", "9ano", "manha", "B", "EF_II"),
+        
+        # EM - ✅ CORREÇÃO: Segmento EM
+        Turma("1emA", "1em", "manha", "A", "EM"),
+        Turma("2emA", "2em", "manha", "A", "EM"),
+        Turma("3emA", "3em", "manha", "A", "EM"),
+        Turma("1emB", "1em", "manha", "B", "EM"),
+        Turma("2emB", "2em", "manha", "B", "EM"),
+        Turma("3emB", "3em", "manha", "B", "EM"),
     ]
 
 def criar_professores_padrao():
-    return [
-        # ✅ CORRIGIDO: Usar apenas disciplinas que existem nas disciplinas padrão
-        Professor("Ana", ["Matemática A"], {"seg", "ter", "qua", "qui", "sex"}, "A"),
-        Professor("Bruno", ["Português A"], {"seg", "ter", "qua", "qui", "sex"}, "A"),
-        Professor("Carla", ["História A", "Geografia A"], {"seg", "ter", "qua", "qui", "sex"}, "A"),
-        Professor("Diego", ["Matemática B"], {"seg", "ter", "qua", "qui", "sex"}, "B"),
-        Professor("Eliane", ["Português B"], {"seg", "ter", "qua", "qui", "sex"}, "B"),
-        Professor("Fábio", ["História B", "Geografia B"], {"seg", "ter", "qua", "qui", "sex"}, "B"),
-        Professor("Gisele", ["Artes A", "Artes B"], {"seg", "ter", "qua", "qui", "sex"}, "AMBOS"),
-        Professor("Hugo", ["Educação Física A", "Educação Física B"], {"seg", "ter", "qua", "qui", "sex"}, "AMBOS"),
-    ]
+    """Cria professores baseados nas regras neuro"""
+    professores = []
+    for prof_info in PROFESSORES_NEURO:
+        professor = Professor(
+            nome=prof_info["nome"],
+            disciplinas=prof_info["disciplinas"],
+            disponibilidade={"seg", "ter", "qua", "qui", "sex"},
+            grupo=prof_info["grupo"]
+        )
+        professores.append(professor)
+    return professores
 
 def criar_disciplinas_padrao():
-    return [
-        # GRUPO A
-        Disciplina("Matemática A", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "A", "#4A90E2", "#FFFFFF"),
-        Disciplina("Português A", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "A", "#D35400", "#FFFFFF"),
-        Disciplina("História A", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "A", "#C0392B", "#FFFFFF"),
-        Disciplina("Geografia A", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em"], "A", "#F39C12", "#000000"),
-        Disciplina("Ciências A", 3, "media", ["6ano", "7ano", "8ano"], "A", "#1ABC9C", "#000000"),
-        Disciplina("Biologia A", 3, "media", ["9ano", "1em", "2em", "3em"], "A", "#27AE60", "#FFFFFF"),
-        Disciplina("Física A", 3, "pesada", ["2em", "3em"], "A", "#8E44AD", "#FFFFFF"),
-        Disciplina("Química A", 3, "pesada", ["9ano", "1em", "2em", "3em"], "A", "#2980B9", "#FFFFFF"),
-        Disciplina("Inglês A", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "A", "#2C3E50", "#FFFFFF"),
-        Disciplina("Artes A", 1, "leve", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "A", "#E67E22", "#FFFFFF"),
-        Disciplina("Educação Física A", 2, "pratica", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "A", "#2ECC71", "#000000"),
+    """Cria disciplinas baseadas nas regras neuro"""
+    disciplinas = []
+    
+    # Turmas do EF II
+    turmas_efii = ["6anoA", "7anoA", "8anoA", "9anoA", "6anoB", "7anoB", "8anoB", "9anoB"]
+    
+    for turma_nome in turmas_efii:
+        serie = turma_nome.replace('A', '').replace('B', '')
+        grupo = 'A' if 'A' in turma_nome else 'B'
         
-        # GRUPO B
-        Disciplina("Matemática B", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "B", "#4A90E2", "#FFFFFF"),
-        Disciplina("Português B", 4, "pesada", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "B", "#D35400", "#FFFFFF"),
-        Disciplina("História B", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "B", "#C0392B", "#FFFFFF"),
-        Disciplina("Geografia B", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em"], "B", "#F39C12", "#000000"),
-        Disciplina("Ciências B", 3, "media", ["6ano", "7ano", "8ano"], "B", "#1ABC9C", "#000000"),
-        Disciplina("Biologia B", 3, "media", ["9ano", "1em", "2em", "3em"], "B", "#27AE60", "#FFFFFF"),
-        Disciplina("Física B", 3, "pesada", ["2em", "3em"], "B", "#8E44AD", "#FFFFFF"),
-        Disciplina("Química B", 3, "pesada", ["9ano", "1em", "2em", "3em"], "B", "#2980B9", "#FFFFFF"),
-        Disciplina("Inglês B", 3, "media", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "B", "#2C3E50", "#FFFFFF"),
-        Disciplina("Artes B", 1, "leve", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "B", "#E67E22", "#FFFFFF"),
-        Disciplina("Educação Física B", 2, "pratica", ["6ano", "7ano", "8ano", "9ano", "1em", "2em", "3em"], "B", "#2ECC71", "#000000"),
-    ]
+        disciplinas_serie = obter_disciplinas_por_serie(serie, grupo)
+        
+        for nome_disc, carga in disciplinas_serie.items():
+            # Verificar se disciplina já existe
+            disc_existente = next((d for d in disciplinas if d.nome == nome_disc), None)
+            
+            if disc_existente:
+                if turma_nome not in disc_existente.turmas:
+                    disc_existente.turmas.append(turma_nome)
+            else:
+                tipo = "pesada" if "Portugues" in nome_disc or "Matematica" in nome_disc else "media"
+                nova_disciplina = Disciplina(
+                    nome=nome_disc,
+                    carga_semanal=carga,
+                    tipo=tipo,
+                    turmas=[turma_nome],
+                    grupo=grupo
+                )
+                disciplinas.append(nova_disciplina)
+    
+    # Turmas do EM
+    turmas_em = ["1emA", "2emA", "3emA", "1emB", "2emB", "3emB"]
+    
+    for turma_nome in turmas_em:
+        serie = turma_nome.replace('A', '').replace('B', '')
+        grupo = 'A' if 'A' in turma_nome else 'B'
+        
+        disciplinas_serie = obter_disciplinas_por_serie(serie, grupo)
+        
+        for nome_disc, carga in disciplinas_serie.items():
+            # Verificar se disciplina já existe
+            disc_existente = next((d for d in disciplinas if d.nome == nome_disc), None)
+            
+            if disc_existente:
+                if turma_nome not in disc_existente.turmas:
+                    disc_existente.turmas.append(turma_nome)
+            else:
+                tipo = "pesada" if "Portugues" in nome_disc or "Matematica" in nome_disc else "media"
+                nova_disciplina = Disciplina(
+                    nome=nome_disc,
+                    carga_semanal=carga,
+                    tipo=tipo,
+                    turmas=[turma_nome],
+                    grupo=grupo
+                )
+                disciplinas.append(nova_disciplina)
+    
+    return disciplinas
 
 def criar_salas_padrao():
-    return [
-        Sala("Sala 1", 30, "normal"),
-        Sala("Sala 2", 30, "normal"),
-        Sala("Laboratório de Ciências", 25, "laboratório"),
-        Sala("Auditório", 100, "auditório"),
-    ]
+    """Cria salas baseadas nas regras neuro"""
+    salas = []
+    for sala_info in SALAS_NEURO:
+        sala = Sala(
+            nome=sala_info["nome"],
+            capacidade=sala_info["capacidade"],
+            tipo=sala_info["tipo"]
+        )
+        salas.append(sala)
+    return salas
 
 def criar_periodos_padrao():
     return [
