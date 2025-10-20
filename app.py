@@ -94,6 +94,14 @@ def converter_disponibilidade_para_completo(disponibilidade):
         convertido.add(converter_dia_para_completo(dia))
     return convertido
 
+def eh_horario_intervalo_prof(horario, segmento_turma=None):
+    """Verifica se é horário de intervalo"""
+    if segmento_turma == "EF_II":
+        return horario == 3  # EF II: intervalo no 3º horário
+    elif segmento_turma == "EM":
+        return horario == 4  # EM: intervalo no 4º horário
+    return False
+
 # Menu de abas
 abas = st.tabs(["🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas", "🏫 Salas", "🗓️ Gerar Grade", "👨‍🏫 Grade por Professor"])
 
@@ -311,7 +319,7 @@ with abas[2]:  # ABA PROFESSORES
                         )
                         st.session_state.professores.append(novo_professor)
                         if salvar_tudo():
-                            st.success(f"✅ Professor '{nome}' adicionado!")
+                            st.success(f"✅ Professor '{nome}' adicionada!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"❌ Erro ao adicionar professor: {str(e)}")
@@ -910,6 +918,7 @@ with abas[5]:  # ABA GERAR GRADE
                     except Exception as e:
                         st.error(f"❌ Erro ao gerar grade: {str(e)}")
                         st.code(traceback.format_exc())
+
 with abas[6]:  # NOVA ABA: GRADE POR PROFESSOR
     st.header("👨‍🏫 Grade Horária por Professor")
     
@@ -956,17 +965,21 @@ with abas[6]:  # NOVA ABA: GRADE POR PROFESSOR
                         width: 100%;
                         border-collapse: collapse;
                         font-size: 14px;
+                        margin: 10px 0;
                     }
                     .grade-professor-table th, .grade-professor-table td {
-                        border: 1px solid #ddd;
-                        padding: 10px;
+                        border: 2px solid #e0e0e0;
+                        padding: 12px 8px;
                         text-align: center;
                         vertical-align: top;
+                        min-height: 80px;
                     }
                     .grade-professor-table th {
                         background-color: #4A90E2;
                         color: white;
                         font-weight: bold;
+                        position: sticky;
+                        top: 0;
                     }
                     .horario-prof-livre {
                         background-color: #f8f9fa;
@@ -974,25 +987,40 @@ with abas[6]:  # NOVA ABA: GRADE POR PROFESSOR
                         font-style: italic;
                     }
                     .horario-prof-aula {
-                        background-color: #d1ecf1;
-                        color: #0c5460;
-                        border-left: 4px solid #0c5460;
+                        background-color: #d4edda;
+                        color: #155724;
+                        border-left: 4px solid #28a745;
+                        transition: all 0.3s ease;
+                    }
+                    .horario-prof-aula:hover {
+                        background-color: #c3e6cb;
+                        transform: scale(1.02);
                     }
                     .horario-prof-indisponivel {
-                        background-color: #ffe6e6;
-                        color: #dc3545;
+                        background-color: #f8d7da;
+                        color: #721c24;
                         font-style: italic;
                     }
                     .info-turma {
                         font-weight: bold;
-                        font-size: 12px;
+                        font-size: 13px;
+                        margin-bottom: 4px;
+                        color: #155724;
                     }
                     .info-disciplina {
-                        font-size: 11px;
+                        font-size: 12px;
+                        margin-bottom: 3px;
+                        color: #0c5460;
                     }
                     .info-sala {
-                        font-size: 10px;
-                        color: #666;
+                        font-size: 11px;
+                        color: #6c757d;
+                        font-style: italic;
+                    }
+                    .horario-intervalo-prof {
+                        background-color: #fff3cd;
+                        color: #856404;
+                        font-weight: bold;
                     }
                     </style>
                     """, unsafe_allow_html=True)
@@ -1020,11 +1048,19 @@ with abas[6]:  # NOVA ABA: GRADE POR PROFESSOR
                             # Encontrar aula neste horário e dia para este professor
                             aula_no_slot = next((a for a in aulas_professor if a.dia == dia and a.horario == horario), None)
                             
+                            # Verificar se é horário de intervalo
+                            is_intervalo = False
+                            if aula_no_slot:
+                                segmento_turma = obter_segmento_turma(aula_no_slot.turma)
+                                is_intervalo = eh_horario_intervalo_prof(horario, segmento_turma)
+                            
                             # Verificar se o professor está indisponível neste horário
                             professor_indisponivel = professor_info and f"{dia}_{horario}" in professor_info.horarios_indisponiveis
                             
                             if professor_indisponivel:
                                 table_html += "<td class='horario-prof-indisponivel'>❌ INDISPONÍVEL</td>"
+                            elif is_intervalo:
+                                table_html += "<td class='horario-intervalo-prof'>🕛 INTERVALO</td>"
                             elif aula_no_slot:
                                 # Formatar informações da aula
                                 table_html += f"""
@@ -1078,6 +1114,37 @@ with abas[6]:  # NOVA ABA: GRADE POR PROFESSOR
                     }
                     st.bar_chart(chart_data, x='Dia', y='Aulas')
                     
+                    # Resumo das aulas
+                    st.subheader("📋 Resumo das Aulas")
+                    
+                    # Agrupar aulas por turma e disciplina
+                    aulas_agrupadas = {}
+                    for aula in aulas_professor:
+                        chave = (aula.turma, aula.disciplina)
+                        if chave not in aulas_agrupadas:
+                            aulas_agrupadas[chave] = []
+                        aulas_agrupadas[chave].append(aula)
+                    
+                    # Criar tabela de resumo
+                    st.write("**Distribuição por Turma e Disciplina:**")
+                    for (turma, disciplina), aulas_list in aulas_agrupadas.items():
+                        segmento = obter_segmento_turma(turma)
+                        col1, col2, col3, col4 = st.columns([2, 2, 1, 1])
+                        with col1:
+                            st.write(f"**{turma}** ({segmento})")
+                        with col2:
+                            st.write(disciplina)
+                        with col3:
+                            st.write(f"{len(aulas_list)} aulas")
+                        with col4:
+                            horas = len(aulas_list) * 50 / 60
+                            st.write(f"{horas:.1f}h")
+                        
+                        # Mostrar horários específicos
+                        horarios_str = ", ".join([f"{a.dia[:3]} {a.horario}º" for a in aulas_list])
+                        st.caption(f"Horários: {horarios_str}")
+                        st.markdown("---")
+                    
                 else:  # Lista Detalhada
                     st.subheader(f"📋 Lista Detalhada - Prof. {professor_selecionado}")
                     
@@ -1114,7 +1181,8 @@ with abas[6]:  # NOVA ABA: GRADE POR PROFESSOR
         with col2:
             st.metric("Total de Professores", len(st.session_state.professores))
         with col3:
-            st.metric("Taxa de Utilização", f"{(len(professores_com_aulas) / len(st.session_state.professores)) * 100:.1f}%")
+            taxa_utilizacao = (len(professores_com_aulas) / len(st.session_state.professores)) * 100 if st.session_state.professores else 0
+            st.metric("Taxa de Utilização", f"{taxa_utilizacao:.1f}%")
         
         # Tabela resumo dos professores
         st.subheader("📊 Resumo por Professor")
@@ -1179,7 +1247,7 @@ with abas[6]:  # NOVA ABA: GRADE POR PROFESSOR
             "grade_professores_completa.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-    
+
 # Sidebar
 st.sidebar.title("⚙️ Configurações")
 if st.sidebar.button("🔄 Resetar Banco de Dados"):
