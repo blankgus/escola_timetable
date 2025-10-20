@@ -69,3 +69,8 @@ class Aula:
     sala: str = "Sala 1"
     grupo: str = "A"
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
+
+# No final do models.py, adicione:
+def formatar_horario_aula(aula):
+    """Formata uma aula para exibição na grade do professor"""
+    return f"{aula.turma}\n{aula.disciplina}\n{aula.sala}"
