@@ -55,7 +55,7 @@ def obter_horarios_turma(turma_nome):
 def calcular_carga_maxima(serie):
     """Calcula a carga horária máxima semanal baseada na série"""
     if 'em' in serie.lower() or 'medio' in serie.lower() or serie in ['1em', '2em', '3em']:
-        return 32  # Ensino Médio: 32 horas
+        return 35  # Ensino Médio: 35 horas
     else:
         return 25  # EF II: 25 horas
 
