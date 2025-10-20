@@ -21,12 +21,13 @@ def criar_dados_iniciais():
         Professor("Vladmir", ["Química A", "Química B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Zabuor", ["Química A", "Química B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Gisele", ["Geografia A", "Geografia B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
-        Professor("Marina", ["Biologia A", "Biologia B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
+        Professor("Marina", ["Biologia A", "Biologia B"], "Ciencias A", Ciencias b" {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("César", ["Informática A", "Informática B", "Física A", "Física B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Anna Maria", ["Filosofia A", "Filosofia B", "Sociologia A", "Sociologia B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Marcão", ["Educação Física A", "Educação Física B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Andréia", ["Educação Física A", "Educação Física B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Vanessa", ["Arte A", "Arte B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
+         Professor("Maria Luiza", ["Ingles A", "Ingles B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Andréia Barreto", ["Dinâmica A", "Dinâmica B", "Vida Pratica A", "Vida Pratica B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
     ]
     
@@ -52,7 +53,7 @@ def criar_dados_iniciais():
     disciplinas = [
         # GRUPO A - TURMAS A
         Disciplina("Português A", 5, "pesada", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
-        Disciplina("Matemática A", 5, "pesada", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
+        Disciplina("Matemática A", 4, "pesada", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
         Disciplina("História A", 2, "media", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
         Disciplina("Geografia A", 2, "media", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
         Disciplina("Ciências A", 2, "media", ["6anoA", "7anoA", "8anoA", "9anoA"], "A"),
@@ -61,7 +62,7 @@ def criar_dados_iniciais():
         Disciplina("Química A", 2, "pesada", ["1emA", "2emA", "3emA"], "A"),
         Disciplina("Inglês A", 2, "leve", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
         Disciplina("Arte A", 2, "leve", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
-        Disciplina("Educação Física A", 3, "pratica", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
+        Disciplina("Educação Física A", 2, "pratica", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
         Disciplina("Filosofia A", 2, "media", ["1emA", "2emA", "3emA"], "A"),
         Disciplina("Sociologia A", 2, "media", ["1emA", "2emA", "3emA"], "A"),
         Disciplina("Informática A", 2, "leve", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
@@ -70,7 +71,7 @@ def criar_dados_iniciais():
         
         # GRUPO B - TURMAS B
         Disciplina("Português B", 5, "pesada", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "B"),
-        Disciplina("Matemática B", 6, "pesada", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "B"),
+        Disciplina("Matemática B", 4, "pesada", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "B"),
         Disciplina("História B", 2, "media", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "B"),
         Disciplina("Geografia B", 2, "media", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "B"),
         Disciplina("Ciências B", 2, "media", ["6anoB", "7anoB", "8anoB", "9anoB"], "B"),
