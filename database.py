@@ -82,7 +82,7 @@ def criar_dados_iniciais():
         Disciplina("Vida Pratica B", 1, "leve", ["6anoB", "7anoB", "8anoB", "9anoB"], "B"),
     ]
     
-       salas = [
+        salas = [
         Sala("Sala 1", 30, "normal"),
         Sala("Sala 2", 30, "normal"),
         Sala("Sala 3", 30, "normal"),
