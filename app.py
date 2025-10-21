@@ -3,7 +3,7 @@ import pandas as pd
 import database
 from session_state import init_session_state
 from auto_save import salvar_tudo
-from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA, HORARIOS_EFII, HORARIOS_EM, HORARIOS_REAIS
+from models import Turma, Professor, Disciplina, Sala, DIAS_SEMANA, HORARIOS_EFII, HORARIOS_EM, HORARIOS_REAIS_EFII, HORARIOS_REAIS_EM, obter_horarios_reais
 from scheduler_ortools import GradeHorariaORTools
 from simple_scheduler import SimpleGradeHoraria
 import io
@@ -51,11 +51,19 @@ def obter_horarios_turma(turma_nome):
     else:
         return HORARIOS_EFII
 
+def obter_horario_real(turma_nome, horario):
+    """Retorna o horário real formatado"""
+    segmento = obter_segmento_turma(turma_nome)
+    if segmento == "EM":
+        return HORARIOS_REAIS_EM.get(horario, f"Horário {horario}")
+    else:
+        return HORARIOS_REAIS_EFII.get(horario, f"Horário {horario}")
+
 # Função para calcular carga horária máxima por série
 def calcular_carga_maxima(serie):
     """Calcula a carga horária máxima semanal baseada na série"""
     if 'em' in serie.lower() or 'medio' in serie.lower() or serie in ['1em', '2em', '3em']:
-        return 32  # Ensino Médio: 32 horas
+        return 35  # Ensino Médio: 35 horas
     else:
         return 25  # EF II: 25 horas
 
@@ -97,10 +105,11 @@ def converter_disponibilidade_para_completo(disponibilidade):
 def eh_horario_intervalo_prof(horario, segmento_turma=None):
     """Verifica se é horário de intervalo"""
     if segmento_turma == "EF_II":
-        return horario == 3  # EF II: intervalo no 3º horário (09:30-09:50)
+        return horario == 3  # EF II: intervalo no 3º horário
     elif segmento_turma == "EM":
-        return horario == 4  # EM: intervalo no 4º horário (09:30-09:50)
+        return horario == 4  # EM: intervalo no 4º horário
     return False
+
 # Menu de abas
 abas = st.tabs(["🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas", "🏫 Salas", "🗓️ Gerar Grade", "👨‍🏫 Grade por Professor"])
 
@@ -133,8 +142,8 @@ with abas[0]:  # ABA INÍCIO
     with col2:
         st.write("**Ensino Médio**")
         st.write(f"Turmas: {len(turmas_em)}")
-        st.write(f"Horário: 07:00 - 12:20/13:10")
-        st.write(f"Períodos: 7 aulas + intervalo")
+        st.write(f"Horário: 07:00 - 13:10")
+        st.write(f"Períodos: 8 aulas + intervalo")
     
     # Verificação de carga horária
     st.subheader("📈 Verificação de Carga Horária")
@@ -295,9 +304,9 @@ with abas[2]:  # ABA PROFESSORES
                 for dia in DIAS_SEMANA:
                     with st.container():
                         st.write(f"**{dia.upper()}:**")
-                        # Mostrar todos os horários possíveis (1-7)
+                        # Mostrar todos os horários possíveis (1-8)
                         horarios_cols = st.columns(4)
-                        horarios_todos = list(range(1, 8))
+                        horarios_todos = list(range(1, 9))
                         for i, horario in enumerate(horarios_todos):
                             with horarios_cols[i % 4]:
                                 if st.checkbox(f"{horario}º", key=f"add_{dia}_{horario}"):
@@ -318,7 +327,7 @@ with abas[2]:  # ABA PROFESSORES
                         )
                         st.session_state.professores.append(novo_professor)
                         if salvar_tudo():
-                            st.success(f"✅ Professor '{nome}' adicionada!")
+                            st.success(f"✅ Professor '{nome}' adicionado!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"❌ Erro ao adicionar professor: {str(e)}")
@@ -367,7 +376,7 @@ with abas[2]:  # ABA PROFESSORES
                     
                     st.write("**Horários Indisponíveis:**")
                     novos_horarios_indisponiveis = []
-                    horarios_todos = list(range(1, 8))
+                    horarios_todos = list(range(1, 9))
                     for dia in DIAS_SEMANA:
                         with st.container():
                             st.write(f"**{dia.upper()}:**")
@@ -432,7 +441,8 @@ with abas[3]:  # ABA TURMAS
             
             # Determinar segmento automaticamente
             segmento = "EM" if serie and 'em' in serie.lower() else "EF_II"
-            st.info(f"💡 Segmento: {segmento} - {calcular_carga_maxima(serie)}h semanais máximas")
+            carga_maxima = 35 if segmento == "EM" else 25
+            st.info(f"💡 Segmento: {segmento} - {carga_maxima}h semanais máximas")
             
             if st.form_submit_button("✅ Adicionar Turma"):
                 if nome and serie:
@@ -623,13 +633,6 @@ with abas[5]:  # ABA GERAR GRADE
             "Algoritmo de Geração",
             ["Algoritmo Simples (Rápido)", "Google OR-Tools (Otimizado)"]
         )
-        
-        dias_em_estendido = st.multiselect(
-            "Dias EM até 13:10",
-            DIAS_SEMANA,
-            default=["ter", "qui"],
-            help="Dias que o Ensino Médio terá aula até 13:10"
-        )
     
     st.subheader("📊 Pré-análise de Viabilidade")
     
@@ -725,14 +728,12 @@ with abas[5]:  # ABA GERAR GRADE
                         else:
                             professores_filtrados = st.session_state.professores
                         
-                        # ✅ PASSAR DIAS EM ESTENDIDO PARA O SCHEDULER
                         if tipo_algoritmo == "Google OR-Tools (Otimizado)":
                             try:
                                 grade = GradeHorariaORTools(
                                     turmas_filtradas,
                                     professores_filtrados,
-                                    disciplinas_filtradas,
-                                    dias_em_estendido=dias_em_estendido
+                                    disciplinas_filtradas
                                 )
                                 aulas = grade.resolver()
                                 metodo = "Google OR-Tools"
@@ -741,8 +742,7 @@ with abas[5]:  # ABA GERAR GRADE
                                 simple_grade = SimpleGradeHoraria(
                                     turmas_filtradas,
                                     professores_filtrados,
-                                    disciplinas_filtradas,
-                                    dias_em_estendido=dias_em_estendido
+                                    disciplinas_filtradas
                                 )
                                 aulas = simple_grade.gerar_grade()
                                 metodo = "Algoritmo Simples (fallback)"
@@ -750,8 +750,7 @@ with abas[5]:  # ABA GERAR GRADE
                             simple_grade = SimpleGradeHoraria(
                                 turmas_filtradas,
                                 professores_filtrados,
-                                disciplinas_filtradas,
-                                dias_em_estendido=dias_em_estendido
+                                disciplinas_filtradas
                             )
                             aulas = simple_grade.gerar_grade()
                             metodo = "Algoritmo Simples"
@@ -780,6 +779,7 @@ with abas[5]:  # ABA GERAR GRADE
                                 dias_ordenados = ["segunda", "terca", "quarta", "quinta", "sexta"]
                                 segmento = obter_segmento_turma(turma_nome)
                                 horarios_ordenados = obter_horarios_turma(turma_nome)
+                                horarios_reais = obter_horarios_reais(segmento)
                                 
                                 # Criar grade visual
                                 st.markdown("""
@@ -814,39 +814,29 @@ with abas[5]:  # ABA GERAR GRADE
                                 """, unsafe_allow_html=True)
                                 
                                 # Criar tabela HTML
-                                table_html = """
-                                <table class='grade-table'>
-                                    <tr>
-                                        <th>Horário</th>
-                                        <th>Segunda</th>
-                                        <th>Terça</th>
-                                        <th>Quarta</th>
-                                        <th>Quinta</th>
-                                        <th>Sexta</th>
-                                    </tr>
-                                """
+                                table_html = ['<table class="grade-table">']
+                                table_html.append('<tr><th>Horário</th><th>Segunda</th><th>Terça</th><th>Quarta</th><th>Quinta</th><th>Sexta</th></tr>')
                                 
                                 for horario in horarios_ordenados:
-                                    table_html += f"<tr><td><strong>{HORARIOS_REAIS[horario]}</strong></td>"
+                                    horario_real = horarios_reais.get(horario, f"Horário {horario}")
+                                    table_html.append(f'<tr><td><strong>{horario_real}</strong></td>')
                                     
                                     for dia in dias_ordenados:
                                         # Encontrar aula neste horário e dia
                                         aula_no_slot = next((a for a in aulas_turma if a.dia == dia and a.horario == horario), None)
                                         
                                         # Verificar se é horário de intervalo
-                                        if horario == 3 and segmento == "EF_II":  # EF II: intervalo no horário 3
-                                            table_html += "<td class='horario-intervalo'>🕛 INTERVALO</td>"
-                                        elif horario == 4 and segmento == "EM":  # EM: intervalo no horário 4
-                                            table_html += "<td class='horario-intervalo'>🕛 INTERVALO</td>"
+                                        if (segmento == "EF_II" and horario == 3) or (segmento == "EM" and horario == 4):
+                                            table_html.append('<td class="horario-intervalo">🕛 INTERVALO</td>')
                                         elif aula_no_slot:
-                                            table_html += f"<td class='horario-aula'>{aula_no_slot.disciplina}<br><small>{aula_no_slot.professor}</small></td>"
+                                            table_html.append(f'<td class="horario-aula">{aula_no_slot.disciplina}<br><small>{aula_no_slot.professor}</small></td>')
                                         else:
-                                            table_html += "<td class='horario-livre'>LIVRE</td>"
+                                            table_html.append('<td class="horario-livre">LIVRE</td>')
                                     
-                                    table_html += "</tr>"
+                                    table_html.append('</tr>')
                                 
-                                table_html += "</table>"
-                                st.markdown(table_html, unsafe_allow_html=True)
+                                table_html.append('</table>')
+                                st.markdown(''.join(table_html), unsafe_allow_html=True)
                                 
                                 # Informações da turma
                                 st.caption(f"Segmento: {segmento} | Horários: {len(horarios_ordenados)} períodos")
@@ -869,7 +859,7 @@ with abas[5]:  # ABA GERAR GRADE
                                     "Disciplina": a.disciplina, 
                                     "Professor": a.professor,
                                     "Dia": a.dia,
-                                    "Horário": f"{a.horario}º ({HORARIOS_REAIS[a.horario]})",
+                                    "Horário": f"{a.horario}º ({obter_horario_real(a.turma, a.horario)})",
                                     "Sala": a.sala,
                                     "Grupo": a.grupo
                                 }
@@ -891,15 +881,13 @@ with abas[5]:  # ABA GERAR GRADE
                                         "Total de Aulas", 
                                         "Professores Utilizados", 
                                         "Turmas com Aula", 
-                                        "Método",
-                                        "Dias EM Estendido"
+                                        "Método"
                                     ],
                                     "Valor": [
                                         len(aulas), 
                                         len(set(a.professor for a in aulas)), 
                                         len(set(a.turma for a in aulas)), 
-                                        metodo,
-                                        ", ".join(dias_em_estendido) if dias_em_estendido else "Nenhum"
+                                        metodo
                                     ]
                                 }
                                 stats_df = pd.DataFrame(stats_data)
@@ -955,7 +943,7 @@ with abas[6]:  # NOVA ABA: GRADE POR PROFESSOR
                     
                     # Criar matriz da grade do professor
                     dias_ordenados = ["segunda", "terca", "quarta", "quinta", "sexta"]
-                    horarios_ordenados = list(range(1, 8))  # Todos os horários possíveis
+                    horarios_ordenados = list(range(1, 9))  # Todos os horários possíveis (1-8)
                     
                     # Criar grade visual
                     st.markdown("""
@@ -989,11 +977,6 @@ with abas[6]:  # NOVA ABA: GRADE POR PROFESSOR
                         background-color: #d4edda;
                         color: #155724;
                         border-left: 4px solid #28a745;
-                        transition: all 0.3s ease;
-                    }
-                    .horario-prof-aula:hover {
-                        background-color: #c3e6cb;
-                        transform: scale(1.02);
                     }
                     .horario-prof-indisponivel {
                         background-color: #f8d7da;
@@ -1027,145 +1010,66 @@ with abas[6]:  # NOVA ABA: GRADE POR PROFESSOR
                     # Obter informações do professor
                     professor_info = next((p for p in st.session_state.professores if p.nome == professor_selecionado), None)
                     
-                    # Criar tabela HTML
-                    table_html = """
-                    <table class='grade-professor-table'>
-                        <tr>
-                            <th>Horário</th>
-                            <th>Segunda</th>
-                            <th>Terça</th>
-                            <th>Quarta</th>
-                            <th>Quinta</th>
-                            <th>Sexta</th>
-                        </tr>
-                    """
+                    # Na aba "Grade por Professor", substitua esta parte:
+
+# Criar tabela HTML CORRIGIDA
+table_html = ['<table class="grade-professor-table">']
+table_html.append('<tr><th>Horário</th><th>Segunda</th><th>Terça</th><th>Quarta</th><th>Quinta</th><th>Sexta</th></tr>')
+
+for horario in range(1, 9):  # Horários de 1 a 8
+    # Determinar texto do horário
+    horario_texto_efii = HORARIOS_REAIS_EFII.get(horario, "")
+    horario_texto_em = HORARIOS_REAIS_EM.get(horario, "")
+    
+    if horario_texto_efii and horario_texto_em:
+        horario_texto = f"{horario_texto_efii} / {horario_texto_em}"
+    elif horario_texto_em:
+        horario_texto = horario_texto_em
+    else:
+        horario_texto = f"Horário {horario}"
+    
+    table_html.append(f'<tr><td><strong>{horario_texto}</strong></td>')
+    
+    for dia in dias_ordenados:
+        # Encontrar aula neste horário e dia para este professor
+        aula_no_slot = next((a for a in aulas_professor if a.dia == dia and a.horario == horario), None)
+        
+        # Verificar se é horário de intervalo
+        is_intervalo = False
+        if aula_no_slot:
+            segmento_turma = obter_segmento_turma(aula_no_slot.turma)
+            is_intervalo = (segmento_turma == "EF_II" and horario == 3) or (segmento_turma == "EM" and horario == 4)
+        
+        # Verificar se o professor está indisponível neste horário
+        professor_indisponivel = professor_info and f"{dia}_{horario}" in professor_info.horarios_indisponiveis
+        
+        if professor_indisponivel:
+            table_html.append('<td class="horario-prof-indisponivel">❌ INDISPONÍVEL</td>')
+        elif is_intervalo:
+            table_html.append('<td class="horario-intervalo-prof">🕛 INTERVALO</td>')
+        elif aula_no_slot:
+            # Formatar informações da aula
+            table_html.append(f'''
+            <td class="horario-prof-aula">
+                <div class="info-turma">{aula_no_slot.turma}</div>
+                <div class="info-disciplina">{aula_no_slot.disciplina}</div>
+                <div class="info-sala">{aula_no_slot.sala}</div>
+            </td>
+            ''')
+        else:
+            table_html.append('<td class="horario-prof-livre">LIVRE</td>')
+    
+    table_html.append('</tr>')
+
+table_html.append('</table>')
+st.markdown(''.join(table_html), unsafe_allow_html=True)
                     
-                    for horario in horarios_ordenados:
-                        table_html += f"<tr><td><strong>{HORARIOS_REAIS[horario]}</strong></td>"
-                        
-                        for dia in dias_ordenados:
-                            # Encontrar aula neste horário e dia para este professor
-                            aula_no_slot = next((a for a in aulas_professor if a.dia == dia and a.horario == horario), None)
-                            
-                            # Verificar se é horário de intervalo
-                            is_intervalo = False
-                            if aula_no_slot:
-                                segmento_turma = obter_segmento_turma(aula_no_slot.turma)
-                                is_intervalo = eh_horario_intervalo_prof(horario, segmento_turma)
-                            
-                            # Verificar se o professor está indisponível neste horário
-                            professor_indisponivel = professor_info and f"{dia}_{horario}" in professor_info.horarios_indisponiveis
-                            
-                            if professor_indisponivel:
-                                table_html += "<td class='horario-prof-indisponivel'>❌ INDISPONÍVEL</td>"
-                            elif is_intervalo:
-                                table_html += "<td class='horario-intervalo-prof'>🕛 INTERVALO</td>"
-                            elif aula_no_slot:
-                                # Formatar informações da aula
-                                table_html += f"""
-                                <td class='horario-prof-aula'>
-                                    <div class='info-turma'>{aula_no_slot.turma}</div>
-                                    <div class='info-disciplina'>{aula_no_slot.disciplina}</div>
-                                    <div class='info-sala'>{aula_no_slot.sala}</div>
-                                </td>
-                                """
-                            else:
-                                table_html += "<td class='horario-prof-livre'>LIVRE</td>"
-                        
-                        table_html += "</tr>"
+          
                     
-                    table_html += "</table>"
-                    st.markdown(table_html, unsafe_allow_html=True)
                     
-                    # Estatísticas do professor
-                    st.subheader("📈 Estatísticas do Professor")
                     
-                    col1, col2, col3, col4 = st.columns(4)
                     
-                    with col1:
-                        total_aulas = len(aulas_professor)
-                        st.metric("Total de Aulas", total_aulas)
                     
-                    with col2:
-                        turmas_ministradas = len(set(a.turma for a in aulas_professor))
-                        st.metric("Turmas", turmas_ministradas)
-                    
-                    with col3:
-                        disciplinas_ministradas = len(set(a.disciplina for a in aulas_professor))
-                        st.metric("Disciplinas", disciplinas_ministradas)
-                    
-                    with col4:
-                        # Calcular horas semanais
-                        horas_totais = total_aulas * 50 / 60  # 50 minutos por aula
-                        st.metric("Horas/Semana", f"{horas_totais:.1f}h")
-                    
-                    # Detalhamento por dia
-                    st.subheader("📅 Distribuição por Dia")
-                    dias_distribuicao = {}
-                    for dia in dias_ordenados:
-                        aulas_dia = [a for a in aulas_professor if a.dia == dia]
-                        dias_distribuicao[dia] = len(aulas_dia)
-                    
-                    # Gráfico de barras simples
-                    chart_data = {
-                        'Dia': [d.capitalize() for d in dias_ordenados],
-                        'Aulas': [dias_distribuicao[dia] for dia in dias_ordenados]
-                    }
-                    st.bar_chart(chart_data, x='Dia', y='Aulas')
-                    
-                    # Resumo das aulas
-                    st.subheader("📋 Resumo das Aulas")
-                    
-                    # Agrupar aulas por turma e disciplina
-                    aulas_agrupadas = {}
-                    for aula in aulas_professor:
-                        chave = (aula.turma, aula.disciplina)
-                        if chave not in aulas_agrupadas:
-                            aulas_agrupadas[chave] = []
-                        aulas_agrupadas[chave].append(aula)
-                    
-                    # Criar tabela de resumo
-                    st.write("**Distribuição por Turma e Disciplina:**")
-                    for (turma, disciplina), aulas_list in aulas_agrupadas.items():
-                        segmento = obter_segmento_turma(turma)
-                        col1, col2, col3, col4 = st.columns([2, 2, 1, 1])
-                        with col1:
-                            st.write(f"**{turma}** ({segmento})")
-                        with col2:
-                            st.write(disciplina)
-                        with col3:
-                            st.write(f"{len(aulas_list)} aulas")
-                        with col4:
-                            horas = len(aulas_list) * 50 / 60
-                            st.write(f"{horas:.1f}h")
-                        
-                        # Mostrar horários específicos
-                        horarios_str = ", ".join([f"{a.dia[:3]} {a.horario}º" for a in aulas_list])
-                        st.caption(f"Horários: {horarios_str}")
-                        st.markdown("---")
-                    
-                else:  # Lista Detalhada
-                    st.subheader(f"📋 Lista Detalhada - Prof. {professor_selecionado}")
-                    
-                    # Criar dataframe detalhado
-                    df_detalhado = pd.DataFrame([
-                        {
-                            "Dia": a.dia.capitalize(),
-                            "Horário": f"{a.horario}º ({HORARIOS_REAIS[a.horario]})",
-                            "Turma": a.turma,
-                            "Disciplina": a.disciplina,
-                            "Sala": a.sala,
-                            "Grupo": a.grupo
-                        }
-                        for a in aulas_professor
-                    ])
-                    
-                    # Ordenar por dia e horário
-                    ordem_dias = {"Segunda": 1, "Terca": 2, "Quarta": 3, "Quinta": 4, "Sexta": 5}
-                    df_detalhado['Ordem'] = df_detalhado['Dia'].map(ordem_dias)
-                    df_detalhado = df_detalhado.sort_values(['Ordem', 'Horário']).drop('Ordem', axis=1)
-                    
-                    st.dataframe(df_detalhado, use_container_width=True)
         
         # Visualização de todos os professores
         st.markdown("---")
@@ -1224,7 +1128,7 @@ with abas[6]:  # NOVA ABA: GRADE POR PROFESSOR
                     {
                         "Dia": a.dia.capitalize(),
                         "Horário": f"{a.horario}º",
-                        "Período": HORARIOS_REAIS[a.horario],
+                        "Período": obter_horario_real(a.turma, a.horario),
                         "Turma": a.turma,
                         "Disciplina": a.disciplina,
                         "Sala": a.sala,
@@ -1266,9 +1170,13 @@ st.sidebar.write(f"**Aulas na Grade:** {len(st.session_state.get('aulas', []))}"
 st.sidebar.write("### 💡 Informações dos Horários:")
 st.sidebar.write("**EF II:** 07:50-12:20")
 st.sidebar.write("- 6 períodos + intervalo")
-st.sidebar.write("**EM:** 07:00-12:20/13:10")
-st.sidebar.write("- 7 períodos + intervalo")
+st.sidebar.write("**EM:** 07:00-13:10")
+st.sidebar.write("- 8 períodos + intervalo")
 
-st.sidebar.write("### 🕒 Horários Reais:")
-for horario, periodo in HORARIOS_REAIS.items():
+st.sidebar.write("### 🕒 Horários EF II:")
+for horario, periodo in HORARIOS_REAIS_EFII.items():
+    st.sidebar.write(f"**{horario}º:** {periodo}")
+
+st.sidebar.write("### 🕒 Horários EM:")
+for horario, periodo in HORARIOS_REAIS_EM.items():
     st.sidebar.write(f"**{horario}º:** {periodo}")

@@ -1,5 +1,5 @@
 import random
-from models import Aula, HORARIOS_REAIS
+from models import Aula, obter_horarios_reais
 import streamlit as st
 
 class SimpleGradeHoraria:
@@ -7,7 +7,6 @@ class SimpleGradeHoraria:
         self.turmas = turmas
         self.professores = professores
         self.disciplinas = disciplinas
-        self.dias_em_estendido = dias_em_estendido or []
         self.aulas_alocadas = []
         
     def obter_grupo_seguro(self, objeto):
@@ -27,19 +26,13 @@ class SimpleGradeHoraria:
         else:
             return "EF_II"
     
-    def obter_horarios_turma(self, turma_nome, dia):
-        """Retorna os horários disponíveis para a turma considerando o dia"""
+    def obter_horarios_turma(self, turma_nome):
+        """Retorna os horários disponíveis para a turma"""
         segmento = self.obter_segmento_turma(turma_nome)
-        
         if segmento == "EM":
-            # EM: 7 períodos, mas pode variar por dia
-            if dia in self.dias_em_estendido:
-                return [1, 2, 3, 4, 5, 6, 7]  # Até 13:10
-            else:
-                return [1, 2, 3, 4, 5, 6]  # Até 12:20
+            return [1, 2, 3, 4, 5, 6, 7, 8]  # EM: 8 períodos
         else:
-            # EF II: sempre 6 períodos (07:50-12:20)
-            return [1, 2, 3, 4, 5, 6]
+            return [1, 2, 3, 4, 5, 6]  # EF II: 6 períodos
     
     def gerar_grade(self):
         """Gera uma grade horária semanal tradicional respeitando horários reais"""
@@ -49,7 +42,6 @@ class SimpleGradeHoraria:
         dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta']
         
         st.info(f"📋 Gerando grade semanal para {len(self.turmas)} turmas...")
-        st.info(f"📅 Dias EM estendido: {self.dias_em_estendido}")
         
         progress_bar = st.progress(0)
         total_aulas_alocadas = 0
@@ -106,8 +98,8 @@ class SimpleGradeHoraria:
         
         # Tentativa 1: Alocar de forma sequencial por dia e horário
         for dia in dias:
-            # Obter horários disponíveis para este dia específico
-            horarios_disponiveis = self.obter_horarios_turma(turma.nome, dia)
+            # Obter horários disponíveis para esta turma
+            horarios_disponiveis = self.obter_horarios_turma(turma.nome)
             
             for horario in horarios_disponiveis:
                 if not disciplinas_restantes:
@@ -157,7 +149,7 @@ class SimpleGradeHoraria:
         while disciplinas_restantes and tentativas_extras < 100:  # Limite de segurança
             tentativas_extras += 1
             for dia in dias:
-                horarios_disponiveis = self.obter_horarios_turma(turma.nome, dia)
+                horarios_disponiveis = self.obter_horarios_turma(turma.nome)
                 
                 for horario in horarios_disponiveis:
                     if not disciplinas_restantes:
@@ -240,15 +232,8 @@ class SimpleGradeHoraria:
                                          key=lambda p: len([a for a in self.aulas_alocadas if a.professor == p.nome]))
             return professores_ordenados[0]
         
-        # DEBUG: Mostrar por que não encontrou professor
-        st.warning(f"❌ Nenhum professor encontrado para {disciplina_nome} no {dia} {horario}º")
-        st.write(f"  - Grupo necessário: {grupo_turma}")
-        st.write(f"  - Professores que ministram {disciplina_nome}: {[p.nome for p in self.professores if disciplina_nome in p.disciplinas]}")
-        st.write(f"  - Grupos desses professores: {[self.obter_grupo_seguro(p) for p in self.professores if disciplina_nome in p.disciplinas]}")
         return None
     
     def _encontrar_sala_disponivel(self, dia, horario):
         """Encontra uma sala disponível (implementação simples)"""
-        # Implementação básica - sempre retorna Sala 1
-        # Em uma versão mais avançada, verificaria conflitos de sala
         return "Sala 1"

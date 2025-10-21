@@ -1,29 +1,40 @@
 from dataclasses import dataclass, field
 from typing import List, Set
 import uuid
-from neuro_rules import HORARIOS_NEURO
 
 DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex"]
 
-# ✅ CORREÇÃO: Horários baseados nas regras neuro
-HORARIOS_EFII = list(range(1, HORARIOS_NEURO['EF_II']['total_periodos'] + 1))
-HORARIOS_EM = list(range(1, HORARIOS_NEURO['EM']['total_periodos'] + 1))
+# ✅ CORREÇÃO: Horários separados por segmento
+HORARIOS_EFII = [1, 2, 3, 4, 5, 6]  # EF II: 6 períodos (07:50-12:20)
+HORARIOS_EM = [1, 2, 3, 4, 5, 6, 7, 8]  # EM: 8 períodos (07:00-13:10)
 
-# Mapeamento de horários reais
-HORARIOS_REAIS = {
-    # EM: 07:00-13:10 (7 períodos)
+# ✅ CORREÇÃO: Horários reais separados
+HORARIOS_REAIS_EFII = {
+    1: "07:50-08:40",
+    2: "08:40-09:30", 
+    3: "09:30-09:50",  # INTERVALO
+    4: "09:50-10:40",
+    5: "10:40-11:30",
+    6: "11:30-12:20"
+}
+
+HORARIOS_REAIS_EM = {
     1: "07:00-07:50",
-    2: "07:50-08:40",
-    3: "08:40-09:30", 
+    2: "07:50-08:40", 
+    3: "08:40-09:30",
     4: "09:30-09:50",  # INTERVALO
     5: "09:50-10:40",
     6: "10:40-11:30",
     7: "11:30-12:20",
-    8: "12:20-13:10",
-    
-    # EF II: 07:50-12:20 (6 períodos) - usando os mesmos números mas diferentes horários
-    # O sistema ajusta automaticamente baseado no segmento
+    8: "12:20-13:10"
 }
+
+def obter_horarios_reais(segmento):
+    """Retorna horários reais baseado no segmento"""
+    if segmento == "EM":
+        return HORARIOS_REAIS_EM
+    else:
+        return HORARIOS_REAIS_EFII
 
 @dataclass
 class Disciplina:
