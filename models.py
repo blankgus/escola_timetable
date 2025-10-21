@@ -4,6 +4,7 @@ Modelos de dados para o sistema de grade horária
 
 import uuid
 from typing import List, Set, Dict, Any
+from dataclasses import dataclass
 
 # Constantes
 DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex"]
@@ -39,6 +40,30 @@ def obter_horarios_reais(segmento):
         return HORARIOS_REAIS_EM
     else:
         return HORARIOS_REAIS_EFII
+
+@dataclass
+class Aula:
+    """Representa uma aula alocada na grade horária"""
+    disciplina: str
+    professor: str
+    sala: str
+    turma: str
+    dia: str
+    horario: int
+    cor_fundo: str = "#4A90E2"
+    cor_fonte: str = "#FFFFFF"
+    
+    def to_dict(self):
+        return {
+            'disciplina': self.disciplina,
+            'professor': self.professor,
+            'sala': self.sala,
+            'turma': self.turma,
+            'dia': self.dia,
+            'horario': self.horario,
+            'cor': self.cor_fundo,
+            'cor_fonte': self.cor_fonte
+        }
 
 class Turma:
     def __init__(self, nome: str, serie: str, turno: str, grupo: str, segmento: str = None):
