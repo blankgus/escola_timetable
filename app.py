@@ -55,7 +55,7 @@ def obter_horarios_turma(turma_nome):
 def calcular_carga_maxima(serie):
     """Calcula a carga horária máxima semanal baseada na série"""
     if 'em' in serie.lower() or 'medio' in serie.lower() or serie in ['1em', '2em', '3em']:
-        return 35  # Ensino Médio: 35 horas
+        return 32  # Ensino Médio: 32 horas
     else:
         return 25  # EF II: 25 horas
 
@@ -101,7 +101,6 @@ def eh_horario_intervalo_prof(horario, segmento_turma=None):
     elif segmento_turma == "EM":
         return horario == 4  # EM: intervalo no 4º horário (09:30-09:50)
     return False
-
 # Menu de abas
 abas = st.tabs(["🏠 Início", "📚 Disciplinas", "👩‍🏫 Professores", "🎒 Turmas", "🏫 Salas", "🗓️ Gerar Grade", "👨‍🏫 Grade por Professor"])
 
