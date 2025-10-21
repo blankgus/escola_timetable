@@ -1,58 +1,128 @@
 """
-Operações de banco de dados simples usando JSON
+Inicialização do estado da sessão Streamlit
 """
 
-import json
-import os
+import streamlit as st
 from models import Turma, Professor, Disciplina, Sala
+from neuro_rules import PROFESSORES_NEURO, SALAS_NEURO, obter_disciplinas_por_serie, TURMAS_NEURO, obter_cor_disciplina
+import database
 
-# Arquivo de dados
-DATA_FILE = "escola_data.json"
+def init_session_state():
+    """Inicializa o estado da sessão Streamlit"""
+    
+    # Inicializar banco de dados
+    if not database.init_db():
+        st.error("❌ Erro ao inicializar banco de dados")
+        return
+    
+    # Listas principais
+    if 'turmas' not in st.session_state:
+        st.session_state.turmas = []
+    
+    if 'professores' not in st.session_state:
+        st.session_state.professores = []
+    
+    if 'disciplinas' not in st.session_state:
+        st.session_state.disciplinas = []
+    
+    if 'salas' not in st.session_state:
+        st.session_state.salas = []
+    
+    # Grades
+    if 'grade_gerada' not in st.session_state:
+        st.session_state.grade_gerada = None
+    
+    if 'grade_info' not in st.session_state:
+        st.session_state.grade_info = None
+    
+    # Configurações
+    if 'sistema_inicializado' not in st.session_state:
+        st.session_state.sistema_inicializado = False
+    
+    # Tentar carregar dados salvos primeiro
+    turmas_salvas, professores_salvos, disciplinas_salvas, salas_salvas = database.carregar_dados()
+    
+    if turmas_salvas and professores_salvos:
+        # Usar dados salvos
+        st.session_state.turmas = turmas_salvas
+        st.session_state.professores = professores_salvos
+        st.session_state.disciplinas = disciplinas_salvas
+        st.session_state.salas = salas_salvas
+        st.session_state.sistema_inicializado = True
+    else:
+        # Inicializar com dados padrão se estiver vazio
+        if not st.session_state.turmas and not st.session_state.professores:
+            _inicializar_dados_padrao()
 
-def salvar_dados(turmas, professores, disciplinas, salas):
-    """Salva todos os dados no arquivo JSON"""
-    try:
-        dados = {
-            'turmas': [turma.__dict__ for turma in turmas],
-            'professores': [prof.__dict__ for prof in professores],
-            'disciplinas': [disc.__dict__ for disc in disciplinas],
-            'salas': [sala.__dict__ for sala in salas]
-        }
+def _inicializar_dados_padrao():
+    """Inicializa com dados padrão da escola Neuro"""
+    
+    # Criar turmas
+    for turma_info in TURMAS_NEURO:
+        turma = Turma(
+            nome=turma_info["nome"],
+            serie=turma_info["serie"],
+            turno=turma_info["turno"],
+            grupo=turma_info["grupo"],
+            segmento=turma_info["segmento"]
+        )
+        st.session_state.turmas.append(turma)
+    
+    # Criar professores
+    for nome_prof, info_prof in PROFESSORES_NEURO.items():
+        professor = Professor(
+            nome=nome_prof,
+            disciplinas=info_prof["disciplinas"],
+            disponibilidade=set(info_prof["disponibilidade"]),
+            grupo=info_prof["grupo"],
+            horarios_indisponiveis=set(info_prof["horarios_indisponiveis"])
+        )
+        st.session_state.professores.append(professor)
+    
+    # Criar disciplinas
+    disciplinas_criadas = {}
+    for turma in st.session_state.turmas:
+        disciplinas_serie = obter_disciplinas_por_serie(turma.serie)
         
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(dados, f, ensure_ascii=False, indent=2)
-        
-        return True
-    except Exception as e:
-        print(f"Erro ao salvar dados: {e}")
-        return False
-
-def carregar_dados():
-    """Carrega dados do arquivo JSON"""
-    try:
-        if not os.path.exists(DATA_FILE):
-            return [], [], [], []
-        
-        with open(DATA_FILE, 'r', encoding='utf-8') as f:
-            dados = json.load(f)
-        
-        # Reconstruir objetos
-        turmas = [Turma(**t) for t in dados.get('turmas', [])]
-        professores = [Professor(**p) for p in dados.get('professores', [])]
-        disciplinas = [Disciplina(**d) for d in dados.get('disciplinas', [])]
-        salas = [Sala(**s) for s in dados.get('salas', [])]
-        
-        return turmas, professores, disciplinas, salas
-    except Exception as e:
-        print(f"Erro ao carregar dados: {e}")
-        return [], [], [], []
-
-def resetar_banco():
-    """Reseta o banco de dados (apaga o arquivo)"""
-    try:
-        if os.path.exists(DATA_FILE):
-            os.remove(DATA_FILE)
-        return True
-    except Exception as e:
-        print(f"Erro ao resetar banco: {e}")
-        return False
+        for disc_info in disciplinas_serie:
+            chave = f"{disc_info['nome']}_{disc_info['grupo']}"
+            
+            if chave not in disciplinas_criadas:
+                # Obter cores padrão
+                cor_info = obter_cor_disciplina(disc_info['nome'])
+                
+                disciplina = Disciplina(
+                    nome=disc_info['nome'],
+                    carga_semanal=disc_info['carga'],
+                    tipo=disc_info['tipo'],
+                    turmas=[turma.nome],  # Inicialmente só esta turma
+                    grupo=disc_info['grupo'],
+                    cor_fundo=cor_info['fundo'],
+                    cor_fonte=cor_info['fonte']
+                )
+                st.session_state.disciplinas.append(disciplina)
+                disciplinas_criadas[chave] = disciplina
+            else:
+                # Adicionar turma à disciplina existente
+                disciplina_existente = disciplinas_criadas[chave]
+                if turma.nome not in disciplina_existente.turmas:
+                    disciplina_existente.turmas.append(turma.nome)
+    
+    # Criar salas
+    for sala_info in SALAS_NEURO:
+        sala = Sala(
+            nome=sala_info["nome"],
+            capacidade=sala_info["capacidade"],
+            tipo=sala_info["tipo"]
+        )
+        st.session_state.salas.append(sala)
+    
+    st.session_state.sistema_inicializado = True
+    
+    # Salvar dados padrão
+    database.salvar_dados(
+        st.session_state.turmas,
+        st.session_state.professores,
+        st.session_state.disciplinas,
+        st.session_state.salas
+    )
