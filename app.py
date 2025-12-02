@@ -127,7 +127,7 @@ with abas[0]:  # ABA INÍCIO
         st.write("**Ensino Médio**")
         st.write(f"Turmas: {len(turmas_em)}")
         st.write(f"Horário: 07:00 - 12:20/13:10")
-        st.write(f"Períodos: 7 aulas + intervalo")
+        st.write(f"Períodos: 8 aulas + intervalo")
     
     # Verificação de carga horária
     st.subheader("📈 Verificação de Carga Horária")
@@ -1205,7 +1205,7 @@ st.sidebar.write("### 💡 Informações dos Horários:")
 st.sidebar.write("**EF II:** 07:50-12:20")
 st.sidebar.write("- 6 períodos + intervalo")
 st.sidebar.write("**EM:** 07:00-12:20/13:10")
-st.sidebar.write("- 7 períodos + intervalo")
+st.sidebar.write("- 8 períodos + intervalo")
 
 st.sidebar.write("### 🕒 Horários Reais:")
 for horario, periodo in HORARIOS_REAIS.items():
