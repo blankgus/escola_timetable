@@ -27,7 +27,7 @@ def criar_dados_iniciais():
         Professor("Marcão", ["Educação Física A", "Educação Física B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Andréia", ["Educação Física A", "Educação Física B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Vanessa", ["Arte A", "Arte B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
-         Professor("Maria Luiza", ["Ingles A", "Ingles B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
+         Professor("Maria Luiza", ["Inglês A", "Inglês B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Andréia Barreto", ["Dinâmica A", "Dinâmica B", "Vida Pratica A", "Vida Pratica B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
     ]
     
