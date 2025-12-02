@@ -616,13 +616,6 @@ with abas[5]:  # ABA GERAR GRADE
             "Algoritmo de Geração",
             ["Algoritmo Simples (Rápido)", "Google OR-Tools (Otimizado)"]
         )
-        
-       ## dias_em_estendido = st.multiselect(
-            "Dias EM até 13:10",
-            DIAS_SEMANA,
-            default=["ter", "qui"],
-            help="Dias que o Ensino Médio terá aula até 13:10"
-        )##
     
     st.subheader("📊 Pré-análise de Viabilidade")
     
