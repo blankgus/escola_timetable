@@ -883,8 +883,7 @@ with abas[5]:  # ABA GERAR GRADE
                                         len(aulas), 
                                         len(set(a.professor for a in aulas)), 
                                         len(set(a.turma for a in aulas)), 
-                                        metodo,
-                                        ", ".join(dias_em_estendido) if dias_em_estendido else "Nenhum"
+                                        metodo
                                     ]
                                 }
                                 stats_df = pd.DataFrame(stats_data)
