@@ -736,8 +736,7 @@ with abas[5]:  # ABA GERAR GRADE
                             simple_grade = SimpleGradeHoraria(
                                 turmas_filtradas,
                                 professores_filtrados,
-                                disciplinas_filtradas,
-                                dias_em_estendido=dias_em_estendido
+                                disciplinas_filtradas
                             )
                             aulas = simple_grade.gerar_grade()
                             metodo = "Algoritmo Simples"
