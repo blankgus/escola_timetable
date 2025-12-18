@@ -735,7 +735,7 @@ with abas[5]:  # ABA GERAR GRADE
                                     turmas_filtradas,
                                     professores_filtrados,
                                     disciplinas_filtradas,
-                                   # dias_em_estendido=dias_em_estendido
+                                    dias_em_estendido=dias_em_estendido
                                 )
                                 aulas = simple_grade.gerar_grade()
                                 metodo = "Algoritmo Simples (fallback)"
@@ -744,7 +744,7 @@ with abas[5]:  # ABA GERAR GRADE
                                 turmas_filtradas,
                                 professores_filtrados,
                                 disciplinas_filtradas,
-                               # dias_em_estendido=dias_em_estendido
+                                dias_em_estendido=dias_em_estendido
                             )
                             aulas = simple_grade.gerar_grade()
                             metodo = "Algoritmo Simples"
