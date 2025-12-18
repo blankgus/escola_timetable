@@ -617,12 +617,12 @@ with abas[5]:  # ABA GERAR GRADE
             ["Algoritmo Simples (Rápido)", "Google OR-Tools (Otimizado)"]
         )
         
-        dias_em_estendido = st.multiselect(
-            "Dias EM até 13:10",
-            DIAS_SEMANA,
-            default=["ter", "qui"],
-            help="Dias que o Ensino Médio terá aula até 13:10"
-        )
+       # dias_em_estendido = st.multiselect(
+        #    "Dias EM até 13:10",
+         #   DIAS_SEMANA,
+         #   default=["ter", "qui"],
+#   help="Dias que o Ensino Médio terá aula até 13:10"
+      #  )
     
     st.subheader("📊 Pré-análise de Viabilidade")
     
@@ -725,7 +725,7 @@ with abas[5]:  # ABA GERAR GRADE
                                     turmas_filtradas,
                                     professores_filtrados,
                                     disciplinas_filtradas,
-                                    dias_em_estendido=dias_em_estendido
+                                   # dias_em_estendido=dias_em_estendido
                                 )
                                 aulas = grade.resolver()
                                 metodo = "Google OR-Tools"
@@ -735,7 +735,7 @@ with abas[5]:  # ABA GERAR GRADE
                                     turmas_filtradas,
                                     professores_filtrados,
                                     disciplinas_filtradas,
-                                    dias_em_estendido=dias_em_estendido
+                                   # dias_em_estendido=dias_em_estendido
                                 )
                                 aulas = simple_grade.gerar_grade()
                                 metodo = "Algoritmo Simples (fallback)"
