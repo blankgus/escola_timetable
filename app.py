@@ -622,7 +622,7 @@ with abas[5]:  # ABA GERAR GRADE
             DIAS_SEMANA,
             default=["ter", "qui"],
    help="Dias que o Ensino Médio terá aula até 13:10"
-      #  )
+        )
     
     st.subheader("📊 Pré-análise de Viabilidade")
     
