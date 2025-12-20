@@ -621,7 +621,7 @@ with abas[5]:  # ABA GERAR GRADE
             "Dias EM até 13:10",
             DIAS_SEMANA,
             default=["ter", "qui"],
-   help="Dias que o Ensino Médio terá aula até 13:10"
+            help="Dias que o Ensino Médio terá aula até 13:10"
         )
     
     st.subheader("📊 Pré-análise de Viabilidade")
@@ -725,7 +725,7 @@ with abas[5]:  # ABA GERAR GRADE
                                     turmas_filtradas,
                                     professores_filtrados,
                                     disciplinas_filtradas,
-                                   # dias_em_estendido=dias_em_estendido
+                                    dias_em_estendido=dias_em_estendido
                                 )
                                 aulas = grade.resolver()
                                 metodo = "Google OR-Tools"
