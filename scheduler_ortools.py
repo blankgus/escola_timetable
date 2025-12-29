@@ -1,183 +1,205 @@
+"""
+GradeHorariaORTools - Versão otimizada para OR-Tools
+"""
+
 from ortools.sat.python import cp_model
 from collections import defaultdict
-from models import Aula, DIAS_SEMANA, HORARIOS_REAIS
 import streamlit as st
 
 class GradeHorariaORTools:
-    def __init__(self, turmas, professores, disciplinas, dias_em_estendido=None, relaxar_horario_ideal=False):
+    def __init__(self, turmas, professores, disciplinas, relaxar_horario_ideal=False):
         self.turmas = turmas
         self.professores = professores
         self.disciplinas = {d.nome: d for d in disciplinas}
-        self.dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta']  # ✅ Usar formato completo
-        self.dias_em_estendido = dias_em_estendido or []
+        self.dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta']
+        self.relaxar_horario_ideal = relaxar_horario_ideal
+        
+        # Configurações por segmento
+        self.config_segmento = {
+            "EF_II": {
+                "total_periodos": 5,
+                "horarios_reais": {
+                    1: "07:50-08:40",
+                    2: "08:40-09:30",
+                    3: "09:50-10:40", 
+                    4: "10:40-11:30",
+                    5: "11:30-12:20"
+                }
+            },
+            "EM": {
+                "total_periodos": 7,
+                "horarios_reais": {
+                    1: "07:00-07:50",
+                    2: "07:50-08:40",
+                    3: "08:40-09:30",
+                    4: "09:50-10:40",
+                    5: "10:40-11:30",
+                    6: "11:30-12:20",
+                    7: "12:20-13:10"
+                }
+            }
+        }
+        
+        # Inicializar modelo
         self.model = cp_model.CpModel()
         self.solver = cp_model.CpSolver()
-        self.solver.parameters.max_time_in_seconds = 60.0
-        self.relaxar_horario_ideal = relaxar_horario_ideal
-
-        self.turma_idx = {t.nome: i for i, t in enumerate(turmas)}
-        self.prof_idx = {p.nome: i for i, p in enumerate(professores)}
-        self.disciplinas_por_turma = self._disciplinas_por_turma()
-
+        self.solver.parameters.max_time_in_seconds = 120.0
+        
         self.variaveis = {}
-        self.atribuicoes_prof = {}
-
-        self._preparar_dados()
+        self.atribuicoes_possiveis = {}
+        
+        # Processar dados
+        self._processar_dados()
         self._criar_variaveis()
         self._adicionar_restricoes()
-
-    def _obter_segmento_turma(self, turma_nome):
-        """Determina o segmento da turma"""
-        if 'em' in turma_nome.lower():
-            return "EM"
-        else:
-            return "EF_II"
-
-    def _obter_horarios_turma(self, turma_nome, dia):
-        """Retorna os horários disponíveis para a turma considerando o dia"""
-        segmento = self._obter_segmento_turma(turma_nome)
+    
+    def _obter_segmento(self, turma_nome):
+        """Retorna segmento da turma"""
+        turma_obj = next((t for t in self.turmas if t.nome == turma_nome), None)
+        if turma_obj and hasattr(turma_obj, 'segmento'):
+            return turma_obj.segmento
+        return "EF_II" if "ef" in turma_nome.lower() or "ano" in turma_nome.lower() else "EM"
+    
+    def _processar_dados(self):
+        """Processa todos os dados para criar combinações possíveis"""
+        st.info("🔧 Processando dados...")
         
-        if segmento == "EM":
-            # EM: 7 períodos, mas pode variar por dia
-            if dia in self.dias_em_estendido:
-                return [1, 2, 3, 4, 5, 6, 7]  # Até 13:10
-            else:
-                return [1, 2, 3, 4, 5, 6]  # Até 12:20
-        else:
-            # EF II: sempre 6 períodos (07:50-12:20)
-            return [1, 2, 3, 4, 5, 6]
-
-    def _eh_horario_intervalo(self, turma_nome, horario):
-        """Verifica se o horário é de intervalo"""
-        segmento = self._obter_segmento_turma(turma_nome)
-        
-        if segmento == "EF_II":
-            return horario == 3  # EF II: intervalo no 3º horário
-        else:
-            return horario == 4  # EM: intervalo no 4º horário
-
-    def _disciplinas_por_turma(self):
-        dp = defaultdict(list)
+        # Criar lista de disciplinas por turma
+        disciplinas_por_turma = defaultdict(list)
         for turma in self.turmas:
-            for nome_disc, disc in self.disciplinas.items():
-                # ✅ CORREÇÃO: Verificar vínculo direto turma-disciplina
+            for disc_nome, disc in self.disciplinas.items():
                 if turma.nome in disc.turmas:
                     for _ in range(disc.carga_semanal):
-                        dp[turma.nome].append(nome_disc)
-        return dp
-
-    def _preparar_dados(self):
-        st.info("🔧 Preparando dados para otimização...")
-        st.info(f"📅 Dias EM estendido: {self.dias_em_estendido}")
+                        disciplinas_por_turma[turma.nome].append(disc_nome)
         
-        for turma_nome, disciplinas in self.disciplinas_por_turma.items():
+        # Para cada turma, criar combinações possíveis
+        for turma_nome, disciplinas in disciplinas_por_turma.items():
+            segmento = self._obter_segmento(turma_nome)
+            config = self.config_segmento[segmento]
+            periodos_disponiveis = list(range(1, config["total_periodos"] + 1))
+            
+            # Para cada disciplina necessária
             for disc_nome in set(disciplinas):
+                disc_obj = self.disciplinas.get(disc_nome)
+                
+                # Para cada dia e período
                 for dia in self.dias:
-                    # ✅ CORREÇÃO: Obter horários específicos por dia e turma
-                    horarios_disponiveis = self._obter_horarios_turma(turma_nome, dia)
-                    
-                    for horario in horarios_disponiveis:
-                        # Pular horário de intervalo
-                        if self._eh_horario_intervalo(turma_nome, horario):
-                            continue
-                            
-                        profs_validos = []
-                        for p in self.professores:
-                            # Verificar se professor pode dar esta disciplina
-                            if disc_nome not in p.disciplinas:
+                    for periodo in periodos_disponiveis:
+                        # Encontrar professores disponíveis
+                        profs_disponiveis = []
+                        for prof in self.professores:
+                            # Verificar se professor ministra a disciplina
+                            if disc_nome not in prof.disciplinas:
                                 continue
                             
-                            # Verificar disponibilidade do dia (já está no formato correto)
-                            if dia not in p.disponibilidade:
+                            # Verificar disponibilidade no dia
+                            if dia not in prof.disponibilidade:
                                 continue
                             
-                            # Verificar horário indisponível
-                            if f"{dia}_{horario}" in p.horarios_indisponiveis:
-                                continue
+                            # Verificar horários indisponíveis
+                            horario_str = f"{dia}_{periodo}"
+                            if isinstance(prof.horarios_indisponiveis, set):
+                                if horario_str in prof.horarios_indisponiveis:
+                                    continue
+                            elif isinstance(prof.horarios_indisponiveis, list):
+                                if horario_str in prof.horarios_indisponiveis:
+                                    continue
                             
                             # Verificar grupo
-                            prof_grupo = getattr(p, 'grupo', 'A')
+                            prof_grupo = getattr(prof, 'grupo', 'A')
                             turma_grupo = next((t.grupo for t in self.turmas if t.nome == turma_nome), 'A')
                             if prof_grupo not in [turma_grupo, "AMBOS"]:
                                 continue
                             
-                            profs_validos.append(p.nome)
+                            profs_disponiveis.append(prof.nome)
                         
-                        if profs_validos:
-                            self.atribuicoes_prof[(turma_nome, disc_nome, dia, horario)] = profs_validos
-
+                        if profs_disponiveis:
+                            chave = (turma_nome, disc_nome, dia, periodo)
+                            self.atribuicoes_possiveis[chave] = profs_disponiveis
+        
+        st.info(f"📊 Criadas {len(self.atribuicoes_possiveis)} combinações possíveis")
+    
     def _criar_variaveis(self):
-        st.info("📊 Criando variáveis de decisão...")
-        for (turma, disc, dia, horario), profs in self.atribuicoes_prof.items():
+        """Cria variáveis de decisão"""
+        st.info("🎲 Criando variáveis...")
+        
+        for (turma, disc, dia, periodo), profs in self.atribuicoes_possiveis.items():
             for prof in profs:
-                var = self.model.NewBoolVar(f'aula_{turma}_{disc}_{dia}_{horario}_{prof}')
-                self.variaveis[(turma, disc, dia, horario, prof)] = var
-
+                var = self.model.NewBoolVar(f'aula_{turma}_{disc}_{dia}_{periodo}_{prof}')
+                self.variaveis[(turma, disc, dia, periodo, prof)] = var
+    
     def _adicionar_restricoes(self):
+        """Adiciona restrições ao modelo"""
         st.info("🔒 Adicionando restrições...")
         
-        # 1. Cada aula pendente deve ser atribuída exatamente uma vez
-        aulas_necessarias = 0
-        for turma_nome, disciplinas in self.disciplinas_por_turma.items():
-            disc_contagem = defaultdict(int)
-            for d in disciplinas:
-                disc_contagem[d] += 1
-                aulas_necessarias += 1
-            
-            for disc_nome, total in disc_contagem.items():
-                vars_disc = []
-                for (t, d, di, h, p), var in self.variaveis.items():
-                    if t == turma_nome and d == disc_nome:
-                        vars_disc.append(var)
-                
-                if vars_disc:
-                    self.model.Add(sum(vars_disc) == total)
+        # 1. Cada aula pendente deve ser alocada
+        contagem_por_turma_disc = defaultdict(int)
+        for turma in self.turmas:
+            for disc_nome, disc in self.disciplinas.items():
+                if turma.nome in disc.turmas:
+                    contagem_por_turma_disc[(turma.nome, disc_nome)] = disc.carga_semanal
         
-        st.write(f"📋 Total de aulas necessárias: {aulas_necessarias}")
-
-        # 2. Um professor não pode dar duas aulas ao mesmo tempo
+        # Para cada par (turma, disciplina), garantir que tenha o número correto de aulas
+        for (turma_nome, disc_nome), total_necessario in contagem_por_turma_disc.items():
+            vars_turma_disc = []
+            for (t, d, di, p, prof), var in self.variaveis.items():
+                if t == turma_nome and d == disc_nome:
+                    vars_turma_disc.append(var)
+            
+            if vars_turma_disc:
+                self.model.Add(sum(vars_turma_disc) == total_necessario)
+        
+        # 2. Professor não pode dar duas aulas ao mesmo tempo
         for prof in self.professores:
             for dia in self.dias:
-                for horario in range(1, 8):  # Todos os horários possíveis (1-7)
+                for periodo in range(1, 8):  # 1-7 períodos
                     vars_prof = []
-                    for (t, d, di, h, p), var in self.variaveis.items():
-                        if p == prof.nome and di == dia and h == horario:
+                    for (t, d, di, p, pr), var in self.variaveis.items():
+                        if pr == prof.nome and di == dia and p == periodo:
                             vars_prof.append(var)
                     
                     if len(vars_prof) > 1:
                         self.model.Add(sum(vars_prof) <= 1)
-
-        # 3. Uma turma não pode ter duas aulas ao mesmo tempo
+        
+        # 3. Turma não pode ter duas aulas ao mesmo tempo
         for turma in self.turmas:
             for dia in self.dias:
-                for horario in range(1, 8):  # Todos os horários possíveis (1-7)
+                for periodo in range(1, 8):  # 1-7 períodos
                     vars_turma = []
-                    for (t, d, di, h, p), var in self.variaveis.items():
-                        if t == turma.nome and di == dia and h == horario:
+                    for (t, d, di, p, pr), var in self.variaveis.items():
+                        if t == turma.nome and di == dia and p == periodo:
                             vars_turma.append(var)
                     
                     if len(vars_turma) > 1:
                         self.model.Add(sum(vars_turma) <= 1)
-
+    
     def resolver(self):
-        st.info("🎯 Resolvendo otimização...")
+        """Resolve o modelo"""
+        st.info("🎯 Resolvendo...")
+        
         status = self.solver.Solve(self.model)
-        aulas = []
         
-        if status == cp_model.OPTIMAL:
-            st.success("✅ Solução ótima encontrada!")
-        elif status == cp_model.FEASIBLE:
-            st.success("✅ Solução viável encontrada!")
-        else:
-            st.error("❌ Nenhuma solução viável encontrada")
-            st.info("💡 Tente ajustar as restrições ou usar o algoritmo simples")
+        if status in [cp_model.OPTIMAL, cp_model.FEASIBLE]:
+            st.success("✅ Solução encontrada!")
+            
+            # Coletar resultados
+            aulas = []
+            for (turma, disc, dia, periodo, prof), var in self.variaveis.items():
+                if self.solver.Value(var) == 1:
+                    segmento = self._obter_segmento(turma)
+                    
+                    aula = {
+                        'turma': turma,
+                        'disciplina': disc,
+                        'professor': prof,
+                        'dia': dia,
+                        'horario': periodo,  # Número do período
+                        'segmento': segmento
+                    }
+                    aulas.append(aula)
+            
+            st.success(f"📊 {len(aulas)} aulas alocadas")
             return aulas
-        
-        # Coletar aulas alocadas
-        for (turma, disc, dia, horario, prof), var in self.variaveis.items():
-            if self.solver.Value(var) == 1:
-                grupo_turma = next((t.grupo for t in self.turmas if t.nome == turma), "A")
-                aulas.append(Aula(turma, disc, prof, dia, horario, "Sala 1", grupo_turma))
-        
-        st.success(f"📊 {len(aulas)} aulas alocadas com sucesso!")
-        return aulas
+        else:
+            st.error("❌ Nenhuma solução encontrada")
+            return []

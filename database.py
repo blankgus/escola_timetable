@@ -27,7 +27,7 @@ def criar_dados_iniciais():
         Professor("Marcão", ["Educação Física A", "Educação Física B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Andréia", ["Educação Física A", "Educação Física B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Vanessa", ["Arte A", "Arte B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
-         Professor("Maria Luiza", ["Inglês A", "Inglês B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
+        Professor("Maria Luiza", ["Inglês A", "Inglês B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
         Professor("Andréia Barreto", ["Dinâmica A", "Dinâmica B", "Vida Pratica A", "Vida Pratica B"], {"segunda", "terca", "quarta", "quinta", "sexta"}, "AMBOS"),
     ]
     
@@ -53,13 +53,14 @@ def criar_dados_iniciais():
     disciplinas = [
         # GRUPO A - TURMAS A
         Disciplina("Português A", 5, "pesada", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
-        Disciplina("Matemática A", 4, "pesada", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
+        Disciplina("Matemática A EF_II", 4, "pesada", ["6anoA", "7anoA", "8anoA", "9anoA" ], "A"),
+        Disciplina("Matemática A EM", 5, "pesada", ["1emA", "2emA", "3emA"], "A"),
         Disciplina("História A", 2, "media", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
         Disciplina("Geografia A", 2, "media", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
         Disciplina("Ciências A", 2, "media", ["6anoA", "7anoA", "8anoA", "9anoA"], "A"),
-        Disciplina("Biologia A", 2, "media", ["1emA", "2emA", "3emA"], "A"),
-        Disciplina("Física A", 2, "pesada", ["1emA", "2emA", "3emA"], "A"),
-        Disciplina("Química A", 2, "pesada", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("Biologia A", 3, "media", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("Física A", 3, "pesada", ["1emA", "2emA", "3emA"], "A"),
+        Disciplina("Química A", 3, "pesada", ["1emA", "2emA", "3emA"], "A"),
         Disciplina("Inglês A", 2, "leve", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
         Disciplina("Arte A", 2, "leve", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
         Disciplina("Educação Física A", 2, "pratica", ["6anoA", "7anoA", "8anoA", "9anoA", "1emA", "2emA", "3emA"], "A"),
@@ -71,13 +72,14 @@ def criar_dados_iniciais():
         
         # GRUPO B - TURMAS B
         Disciplina("Português B", 5, "pesada", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "B"),
-        Disciplina("Matemática B", 4, "pesada", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "B"),
+        Disciplina("Matemática B", 5, "pesada", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Matemática B", 4, "pesada", ["6anoB", "7anoB", "8anoB", "9anoB"], "B"),
         Disciplina("História B", 2, "media", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "B"),
         Disciplina("Geografia B", 2, "media", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "B"),
         Disciplina("Ciências B", 2, "media", ["6anoB", "7anoB", "8anoB", "9anoB"], "B"),
-        Disciplina("Biologia B", 2, "media", ["1emB", "2emB", "3emB"], "B"),
-        Disciplina("Física B", 2, "pesada", ["1emB", "2emB", "3emB"], "B"),
-        Disciplina("Química B", 2, "pesada", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Biologia B", 3, "media", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Física B", 3, "pesada", ["1emB", "2emB", "3emB"], "B"),
+        Disciplina("Química B", 3, "pesada", ["1emB", "2emB", "3emB"], "B"),
         Disciplina("Inglês B", 2, "leve", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "B"),
         Disciplina("Arte B", 2, "leve", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "B"),
         Disciplina("Educação Física B", 2, "pratica", ["6anoB", "7anoB", "8anoB", "9anoB", "1emB", "2emB", "3emB"], "B"),

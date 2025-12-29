@@ -3,78 +3,64 @@ Modelos de dados para o sistema de grade horária
 """
 
 import uuid
-from typing import List, Set, Dict, Any
-from dataclasses import dataclass
+from typing import List
+from dataclasses import dataclass, asdict
 
 # Constantes
 DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex"]
 
-# Horários disponíveis por segmento - CORRIGIDO
-HORARIOS_EFII = [1, 2, 3, 4, 5]  # EF II: 5 aulas + intervalo (25h semanais)
-HORARIOS_EM = [1, 2, 3, 4, 5, 6, 7]  # EM: 7 aulas + intervalo (35h semanais)
-
-# Horários reais formatados - CORRIGIDO
-HORARIOS_REAIS_EFII = {
-    1: "07:50 - 08:40",
-    2: "08:40 - 09:30", 
-    3: "09:30 - 09:50 (Intervalo)",
-    4: "09:50 - 10:40",
-    5: "10:40 - 11:30",
-    6: "11:30 - 12:20"
+# Horários reais por período e segmento (para referência, não usados diretamente)
+HORARIOS_REAIS = {
+    "EF_II": {
+        1: "07:50 - 08:40",
+        2: "08:40 - 09:30",
+        3: "09:50 - 10:40",
+        4: "10:40 - 11:30",
+        5: "11:30 - 12:20"
+    },
+    "EM": {
+        1: "07:00 - 07:50",
+        2: "07:50 - 08:40",
+        3: "08:40 - 09:30",
+        4: "09:50 - 10:40",
+        5: "10:40 - 11:30",
+        6: "11:30 - 12:20",
+        7: "12:20 - 13:10"
+    }
 }
-
-HORARIOS_REAIS_EM = {
-    1: "07:00 - 07:50",
-    2: "07:50 - 08:40",
-    3: "08:40 - 09:30",
-    4: "09:30 - 09:50 (Intervalo)",
-    5: "09:50 - 10:40", 
-    6: "10:40 - 11:30",
-    7: "11:30 - 12:20",
-    8: "12:20 - 13:10"
-}
-
-def obter_horarios_reais(segmento):
-    """Retorna os horários reais baseado no segmento"""
-    if segmento == "EM":
-        return HORARIOS_REAIS_EM
-    else:
-        return HORARIOS_REAIS_EFII
-
-def obter_horarios_disponiveis(segmento):
-    """Retorna os horários disponíveis baseado no segmento"""
-    if segmento == "EM":
-        return HORARIOS_EM
-    else:
-        return HORARIOS_EFII
 
 @dataclass
 class Aula:
     """Representa uma aula alocada na grade horária"""
+    turma: str
     disciplina: str
     professor: str
-    sala: str
-    turma: str
     dia: str
-    horario: int
+    horario: int  # Número do período (1-7 para EM, 1-5 para EF II)
+    periodo: int = None  # Para compatibilidade, mesmo que horario
+    segmento: str = None  # Segmento: "EF_II" ou "EM"
+    sala: str = "Sala 1"
+    grupo: str = "A"
     cor_fundo: str = "#4A90E2"
     cor_fonte: str = "#FFFFFF"
     
+    def __post_init__(self):
+        # Se periodo não foi fornecido, usa o mesmo valor de horario
+        if self.periodo is None:
+            self.periodo = self.horario
+        # Se segmento não foi fornecido, tenta inferir
+        if self.segmento is None:
+            if 'em' in self.turma.lower():
+                self.segmento = "EM"
+            else:
+                self.segmento = "EF_II"
+    
     def to_dict(self):
-        return {
-            'disciplina': self.disciplina,
-            'professor': self.professor,
-            'sala': self.sala,
-            'turma': self.turma,
-            'dia': self.dia,
-            'horario': self.horario,
-            'cor': self.cor_fundo,
-            'cor_fonte': self.cor_fonte
-        }
+        return asdict(self)
 
 class Turma:
-    def __init__(self, nome: str, serie: str, turno: str, grupo: str, segmento: str = None):
-        self.id = str(uuid.uuid4())
+    def __init__(self, nome: str, serie: str, turno: str, grupo: str, segmento: str = None, id: str = None):
+        self.id = id or str(uuid.uuid4())
         self.nome = nome
         self.serie = serie
         self.turno = turno
@@ -88,28 +74,58 @@ class Turma:
         else:
             return "EF_II"
     
-    def get_horarios(self):
-        """Retorna os horários disponíveis para esta turma"""
+    def get_horarios_disponiveis(self):
+        """Retorna os períodos disponíveis para esta turma"""
         if self.segmento == "EM":
-            return HORARIOS_EM
+            return list(range(1, 8))  # Períodos 1-7
         else:
-            return HORARIOS_EFII
-    
-    def get_horario_real(self, horario):
-        """Retorna o horário real formatado"""
-        if self.segmento == "EM":
-            return HORARIOS_REAIS_EM.get(horario, f"Horário {horario}")
-        else:
-            return HORARIOS_REAIS_EFII.get(horario, f"Horário {horario}")
+            return list(range(1, 6))  # Períodos 1-5
     
     def get_carga_maxima(self):
         """Retorna a carga horária máxima semanal"""
         if self.segmento == "EM":
-            return 35  # 7 horas por dia × 5 dias = 35 horas
+            return 35  # 7 aulas × 5 dias
         else:
-            return 25  # 5 horas por dia × 5 dias = 25 horas
+            return 25  # 5 aulas × 5 dias
     
     def __repr__(self):
         return f"Turma({self.nome}, {self.serie}, {self.grupo}, {self.segmento})"
 
-# Restante do código permanece igual...
+class Professor:
+    def __init__(self, nome: str, disciplinas: List[str], disponibilidade: List[str], 
+                 grupo: str = "AMBOS", horarios_indisponiveis: List[str] = None, id: str = None):
+        self.id = id or str(uuid.uuid4())
+        self.nome = nome
+        self.disciplinas = disciplinas
+        self.disponibilidade = disponibilidade
+        self.grupo = grupo
+        self.horarios_indisponiveis = horarios_indisponiveis or []
+    
+    def __repr__(self):
+        return f"Professor({self.nome}, {self.disciplinas})"
+
+class Disciplina:
+    def __init__(self, nome: str, carga_semanal: int, tipo: str, 
+                 turmas: List[str], grupo: str = "A", 
+                 cor_fundo: str = "#4A90E2", cor_fonte: str = "#FFFFFF", id: str = None):
+        self.id = id or str(uuid.uuid4())
+        self.nome = nome
+        self.carga_semanal = carga_semanal
+        self.tipo = tipo
+        self.turmas = turmas
+        self.grupo = grupo
+        self.cor_fundo = cor_fundo
+        self.cor_fonte = cor_fonte
+    
+    def __repr__(self):
+        return f"Disciplina({self.nome}, {self.carga_semanal}h, {self.grupo})"
+
+class Sala:
+    def __init__(self, nome: str, capacidade: int, tipo: str = "normal", id: str = None):
+        self.id = id or str(uuid.uuid4())
+        self.nome = nome
+        self.capacidade = capacidade
+        self.tipo = tipo
+    
+    def __repr__(self):
+        return f"Sala({self.nome}, {self.capacidade}, {self.tipo})"
